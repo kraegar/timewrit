@@ -38,6 +38,9 @@ COPY --from=builder /install /usr/local
 # Copy the rest of the application code
 COPY . .
 
+# Collect static files for production
+RUN SECRET_KEY="collectstatic-dummy" DATABASE_URL="sqlite:///:memory:" python manage.py collectstatic --noinput
+
 # Expose the Cloud Run default port
 ENV PORT 8080
 ENV DEBUG False
