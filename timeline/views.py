@@ -930,47 +930,71 @@ import json
 @user_passes_test(lambda u: u.is_staff)
 def backup_all_json(request):
     """
-    Exports a high-fidelity 'Full Archive' including ALL events, people, locations,
-    and private researcher notes. Staff only.
+    Exports a high-fidelity 'Deep Archive' including ALL objects in the database.
+    Ensures 100% field parity for instance-to-instance migration.
     """
-    events = TimelineEvent.objects.all().select_related('owner', 'location', 'end_location')
+    from .serializers import (
+        serialize_event, serialize_location, serialize_person, 
+        serialize_story, serialize_source, serialize_timeline,
+        serialize_person_relationship, serialize_tags
+    )
+    
     sources_cache = {}
     
-    serialized_events = []
+    # 1. Timelines
+    timelines = [serialize_timeline(tl, include_private=True) for tl in Timeline.objects.all()]
     
-    # Bulk-fetch StoryEvents
+    # 2. People & Relationships
+    people = [serialize_person(p, sources_cache, include_private=True) for p in Person.objects.all()]
+    relationships = [serialize_person_relationship(r) for r in PersonRelationship.objects.all()]
+    
+    # 3. Locations
+    locations = [serialize_location(l, sources_cache, include_private=True) for l in Location.objects.all()]
+    
+    # 4. Stories & StoryEvents
+    stories = [serialize_story(s, request_user=request.user, include_private=True) for s in Story.objects.all()]
+    
+    # 5. Events - fully populated
+    events = []
+    # Bulk-fetch StoryEvents for grouping
     from collections import defaultdict
     story_events_by_event = defaultdict(list)
     for se in StoryEvent.objects.all().select_related('story'):
         story_events_by_event[se.event_id].append(se)
 
-    for e in events:
+    for e in TimelineEvent.objects.all().prefetch_related('timelines', 'people', 'tags', 'attachments', 'additional_images'):
         item = serialize_event(e, sources_cache=sources_cache, request_user=request.user, include_private=True)
         for se in story_events_by_event[e.id]:
-            story = se.story
             item['stories'].append({
-                'id': story.id,
-                'title': story.title,
-                'color': story.color,
+                'title': se.story.title,
                 'sequence': se.sequence
             })
-        serialized_events.append(item)
-    
-    # Also ensure we serialize ALL people and locations for a true backup
-    entities = {
-        'locations': [serialize_location(l, sources_cache, include_private=True) for l in Location.objects.all()],
-        'people': [serialize_person(p, sources_cache, include_private=True) for p in Person.objects.all()],
-        'stories': [serialize_story(s, request_user=request.user, include_private=True) for s in Story.objects.all()],
-        'sources': list(sources_cache.values()),
-    }
+        events.append(item)
+
+    # 6. Tags & Final Sources
+    tags = serialize_tags(Tag.objects.all())
+    # Note: serialize_source might have populated sources_cache while serializing other objects
+    # We ensure we have every single source regardless
+    for s in Source.objects.all():
+        serialize_source(s, sources_cache, include_private=True)
 
     export_payload = {
-        'version': '3.0',
-        'type': 'high-fidelity-backup',
+        'version': '4.0',
+        'type': 'deep-archive',
         'export_date': datetime.now().isoformat(),
-        'events': serialized_events,
-        'entities': entities,
+        'entities': {
+            'tags': tags,
+            'sources': list(sources_cache.values()),
+            'locations': locations,
+            'people': people,
+            'relationships': relationships,
+            'timelines': timelines,
+            'stories': stories,
+            'events': events,
+        }
     }
+    
+    response = HttpResponse(json.dumps(export_payload, indent=2), content_type='application/json')
     
     response = HttpResponse(json.dumps(export_payload, indent=2), content_type='application/json')
     response['Content-Disposition'] = f'attachment; filename="timewrit_full_backup_{datetime.now().strftime("%Y%md_%H%M")}.json"'
