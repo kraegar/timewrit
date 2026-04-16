@@ -53,7 +53,7 @@ def pull_secrets_from_manager():
                             user, sep_p, password = user_pass.partition(':')
                             if sep_p:
                                 # Specifically encode ONLY the password component
-                                val = f"{scheme}{sep}{user}:{quote(password)}@{at_socket}{rest}"
+                                val = f"{scheme}{sep}{user}:{quote(password)}{at_socket}{rest}"
                         except Exception:
                             pass 
                     return val
