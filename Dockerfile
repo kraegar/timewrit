@@ -44,4 +44,4 @@ ENV DEBUG False
 
 # Start the application with Gunicorn
 # Using 2 workers to keep memory usage low on a shared-core instance
-CMD ["gunicorn", "--bind", ":8080", "--workers", "2", "timeline_project.wsgi:application"]
+CMD ["gunicorn", "--bind", ":8080", "--workers", "2", "--access-logfile", "-", "timeline_project.wsgi:application"]

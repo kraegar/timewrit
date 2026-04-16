@@ -90,6 +90,18 @@ def pull_secrets_from_manager():
                     import dj_database_url
                     db_config = dj_database_url.parse(db_url)
                     sys.stderr.write(f"--- DATABASE READY FOR: {db_config.get('NAME')} ---\n")
+                    
+                    # 4. DEEP PING: Actually attempt a query
+                    try:
+                        import psycopg2
+                        conn = psycopg2.connect(db_url, connect_timeout=5)
+                        cur = conn.cursor()
+                        cur.execute("SELECT 1;")
+                        cur.close()
+                        conn.close()
+                        sys.stderr.write("--- DEEP DATABASE PING: SUCCESS ---\n")
+                    except Exception as e:
+                        sys.stderr.write(f"--- DEEP DATABASE PING: FAILED: {str(e)} ---\n")
                 except Exception as e:
                     sys.stderr.write(f"--- DATABASE CONFIG ERROR: {str(e)} ---\n")
 
