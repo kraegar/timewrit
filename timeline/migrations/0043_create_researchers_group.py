@@ -3,10 +3,9 @@ from django.db import migrations
 def create_researchers_group(apps, schema_editor):
     Group = apps.get_model('auth', 'Group')
     Permission = apps.get_model('auth', 'Permission')
-    ContentType = apps.get_model('contenttypes', 'ContentType')
 
     # Create the Researchers group
-    group, created = Group.get_or_create(name='Researchers')
+    group, created = Group.objects.get_or_create(name='Researchers')
 
     # Define the models we want to grant full access to
     models_to_grant = [
@@ -16,7 +15,8 @@ def create_researchers_group(apps, schema_editor):
         'publiccomment', 'researchquestion'
     ]
 
-    # Find the permissions
+    # Find the permissions specifically for our app
+    # We use a filter to find all relevant perms (add, change, delete, view)
     permissions = Permission.objects.filter(
         content_type__app_label='timeline',
         codename__regex=r'^(add|change|delete|view)_'
@@ -24,8 +24,7 @@ def create_researchers_group(apps, schema_editor):
 
     # Add permissions to the group
     for perm in permissions:
-        if any(model in perm.codename for model in models_to_grant):
-            group.permissions.add(perm)
+        group.permissions.add(perm)
 
 def remove_researchers_group(apps, schema_editor):
     Group = apps.get_model('auth', 'Group')
