@@ -161,12 +161,19 @@ if USE_GOOGLE_OAUTH:
     AUTHENTICATION_BACKENDS.insert(0, 'social_core.backends.google.GoogleOAuth2')
     SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.getenv('GOOGLE_CLIENT_ID')
     SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
-    SOCIAL_AUTH_REDIRECT_IS_HTTPS = os.getenv('SECURE_SSL_REDIRECT', 'False') == 'True' or not DEBUG
+    
+    # Force HTTPS for the social-auth redirect URI
+    SOCIAL_AUTH_REDIRECT_IS_HTTPS = True
+    SOCIAL_AUTH_URL_NAMESPACE = 'social'
     
     # Auth behavior settings
     LOGIN_URL = '/auth/login/google-oauth2/'
     LOGIN_REDIRECT_URL = '/admin/'
     LOGOUT_REDIRECT_URL = '/'
+
+# Proxy Awareness (Critical for Cloud Run HTTPS)
+USE_X_FORWARDED_HOST = True
+USE_X_FORWARDED_PORT = True
 
 TEMPLATES = [
     {
