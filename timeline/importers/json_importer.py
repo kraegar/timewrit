@@ -98,7 +98,7 @@ class JsonEventImporter:
                     'researcher_notes': s_data.get('researcher_notes', ''),
                     'needs_research': s_data.get('needs_research', False),
                     'is_private': s_data.get('is_private', False),
-                    'owner': self.user if self.user and self.user.is_authenticated else None
+                    'owner': self.user
                 }
             )
             created[s_data['title']] = source
@@ -144,7 +144,7 @@ class JsonEventImporter:
                     'researcher_notes': loc_data.get('researcher_notes', ''),
                     'needs_research': loc_data.get('needs_research', False),
                     'is_private': loc_data.get('is_private', False),
-                    'owner': self.user if self.user and self.user.is_authenticated else None
+                    'owner': self.user
                 }
             )
             
@@ -183,7 +183,7 @@ class JsonEventImporter:
                     'researcher_notes': tl_data.get('researcher_notes', ''),
                     'needs_research': tl_data.get('needs_research', False),
                     'is_private': tl_data.get('is_private', False),
-                    'owner': self.user if self.user and self.user.is_authenticated else None
+                    'owner': self.user
                 }
             )
             created[name] = tl
@@ -212,7 +212,7 @@ class JsonEventImporter:
                     'researcher_notes': p.get('researcher_notes', ''),
                     'needs_research': p.get('needs_research', False),
                     'is_private': p.get('is_private', False),
-                    'owner': self.user if self.user and self.user.is_authenticated else None
+                    'owner': self.user
                 }
             )
 
@@ -226,7 +226,7 @@ class JsonEventImporter:
                     'researcher_notes': s.get('researcher_notes', ''),
                     'needs_research': s.get('needs_research', False),
                     'is_private': s.get('is_private', False),
-                    'owner': self.user if self.user and self.user.is_authenticated else None
+                    'owner': self.user
                 }
             )
 
@@ -258,7 +258,7 @@ class JsonEventImporter:
                 event, created = TimelineEvent.objects.get_or_create(
                     title=e['title'],
                     start_date=parse_date(e['start_date']),
-                    owner=self.user if self.user and self.user.is_authenticated else None,
+                    owner=self.user,
                     defaults={
                         'description': e.get('description', ''),
                         'end_date': parse_date(e['end_date']) if e.get('end_date') else None,
@@ -313,7 +313,7 @@ class JsonEventImporter:
                         'title': a.get('title', 'Imported'),
                         'file_type': a.get('type', 'other'),
                         'description': a.get('description', ''),
-                        'owner': self.user if self.user and self.user.is_authenticated else None
+                        'owner': self.user
                     }
                 )
                 if type_name == 'event': attachment.events.add(obj)

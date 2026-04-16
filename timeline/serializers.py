@@ -232,6 +232,10 @@ def serialize_person(person, sources_cache=None, include_details=True, relations
                 'to_person': r['to_person'].name,
                 'to_person_id': r['to_person'].id,
                 'type': r['relationship_type'],
+                # Legacy UI Compatibility
+                'start': r['start_date'].isoformat() if r.get('start_date') else None,
+                'end': r['end_date'].isoformat() if r.get('end_date') else None,
+                # Deep Archive Parity
                 'start_date': r['start_date'].isoformat() if r.get('start_date') else None,
                 'end_date': r['end_date'].isoformat() if r.get('end_date') else None,
                 'notes': r.get('notes'),
@@ -361,7 +365,15 @@ def serialize_event(event, sources_cache=None, request_user=None, include_privat
 
     data = {
         'id': event.id,
-        'title': event.title,
+        # Legacy UI Compatibility (Vis.js requires 'content' and 'start')
+        'content': event.title,
+        'start': event.start_date.isoformat(),
+        'end': event.end_date.isoformat() if event.end_date else None,
+        # Tooltip for vis.js
+        'title': event.description[:100] + '...' if event.description else event.title,
+
+        # Deep Archive Parity (Field-accurate names)
+        'event_title': event.title,
         'description': event.description,
         'start_date': event.start_date.isoformat(),
         'start_date_precision': event.start_date_precision,
