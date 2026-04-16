@@ -2,13 +2,15 @@ from .models import Tag, Source, Location, Person, Timeline, TimelineEvent, Stor
 
 
 
-def _safe_image_url(image_field):
+def _safe_image_url(image_field, relative=False):
     """
-    Returns the URL of an ImageField, or None if the field is empty or the
-    underlying file has been deleted from disk without updating the database.
+    Returns the URL of an ImageField, or the relative filesystem path if relative=True.
+    Returns None if the field is empty.
     """
     if not image_field:
         return None
+    if relative:
+        return image_field.name
     try:
         return image_field.url
     except ValueError:
@@ -20,7 +22,7 @@ def serialize_tags(tags_manager):
     """
     return [{'id': tag.id, 'name': tag.name, 'color': tag.color} for tag in tags_manager.all()]
 
-def serialize_attachments(attachments_manager):
+def serialize_attachments(attachments_manager, include_private=False):
     """
     Serializes a queryset of Attachments, ensuring file URLs are handled safely.
     """
@@ -29,6 +31,7 @@ def serialize_attachments(attachments_manager):
             'id': attachment.id, 
             'title': attachment.title, 
             'url': attachment.file.url if attachment.file else None, 
+            'relative_path': attachment.file.name if attachment.file and include_private else None,
             'type': attachment.file_type, 
             'description': attachment.description
         } for attachment in attachments_manager.all()
@@ -71,7 +74,7 @@ def serialize_research_questions(questions_manager, request_user=None):
         if rq.owner == request_user and rq.status == 'open'
     ]
 
-def serialize_source(source, sources_cache=None):
+def serialize_source(source, sources_cache=None, include_private=False):
     """
     Serializes a Source to a minimal ``{'id': ...}`` stub for inline references.
     If ``sources_cache`` is provided, the full source detail is stored there
@@ -82,15 +85,23 @@ def serialize_source(source, sources_cache=None):
         return None
     
     if sources_cache is not None and source.id not in sources_cache:
-        sources_cache[source.id] = {
+        data = {
             'id': source.id,
             'title': source.title,
             'author': source.author,
             'url': source.url,
             'publication_date': source.publication_date,
             'tags': serialize_tags(source.tags),
-            'attachments': serialize_attachments(source.attachments)
+            'attachments': serialize_attachments(source.attachments, include_private)
         }
+        if include_private:
+            data.update({
+                'researcher_notes': source.researcher_notes,
+                'needs_research': source.needs_research,
+                'is_private': source.is_private,
+                'owner': source.owner.username if source.owner else None,
+            })
+        sources_cache[source.id] = data
     
     return {'id': source.id}
 
@@ -142,7 +153,7 @@ def resolve_location_full_name(location, event_date=None):
         return f"{parent_name} > {local_name}"
     return local_name
 
-def serialize_location(location, sources_cache=None, event_date=None, request_user=None):
+def serialize_location(location, sources_cache=None, event_date=None, request_user=None, include_private=False):
     """
     Serializes a Location, including its attachments, tags, and all display fields.
     """
@@ -150,40 +161,51 @@ def serialize_location(location, sources_cache=None, event_date=None, request_us
         return None
     
     image_url = _safe_image_url(location.image)
+    image_path = _safe_image_url(location.image, relative=True) if include_private else None
 
     resolved_short_name = resolve_location_name(location, event_date)
     resolved_full_name = resolve_location_full_name(location, event_date)
 
-    return {
+    data = {
         'id': location.id,
         'name': resolved_full_name,
         'short_name': resolved_short_name,
         'original_name': location.name if resolved_short_name != location.name else None,
         'coordinates': location.coordinates,
         'description': location.description,
-        'description_sources': [serialize_source(s, sources_cache)['id'] for s in location.description_sources.all()],
+        'description_sources': [serialize_source(s, sources_cache, include_private)['id'] for s in location.description_sources.all()],
         'image': image_url,
         'link': location.link,
         'established_date': location.established_date.isoformat() if location.established_date else None,
         'established_date_formatted': format_date_with_precision(location.established_date, location.established_date_precision or 'exact', location.established_date_granularity or 'day'),
         'established_date_precision': location.established_date_precision,
         'established_date_granularity': location.established_date_granularity,
-        'established_date_source': serialize_source(location.established_date_source, sources_cache),
+        'established_date_source': serialize_source(location.established_date_source, sources_cache, include_private),
         'ceased_date': location.ceased_date.isoformat() if location.ceased_date else None,
         'ceased_date_formatted': format_date_with_precision(location.ceased_date, location.ceased_date_precision or 'exact', location.ceased_date_granularity or 'day'),
         'ceased_date_precision': location.ceased_date_precision,
         'ceased_date_granularity': location.ceased_date_granularity,
-        'ceased_date_source': serialize_source(location.ceased_date_source, sources_cache),
+        'ceased_date_source': serialize_source(location.ceased_date_source, sources_cache, include_private),
         'status': location.status,
         'owner': location.owner.username if location.owner else None,
         'tags': serialize_tags(location.tags),
-        'attachments': serialize_attachments(location.attachments),
+        'attachments': serialize_attachments(location.attachments, include_private),
         'disputed_facts': serialize_disputed_facts(location.disputed_facts, sources_cache),
         'public_comments': serialize_public_comments(location.public_comments),
         'research_questions': serialize_research_questions(location.research_questions, request_user)
     }
 
-def serialize_person(person, sources_cache=None, include_details=True, relationship_cache=None, request_user=None):
+    if include_private:
+        data.update({
+            'image_path': image_path,
+            'researcher_notes': location.researcher_notes,
+            'needs_research': location.needs_research,
+            'is_private': location.is_private,
+        })
+
+    return data
+
+def serialize_person(person, sources_cache=None, include_details=True, relationship_cache=None, request_user=None, include_private=False):
     """
     Serializes a Person.
 
@@ -195,6 +217,7 @@ def serialize_person(person, sources_cache=None, include_details=True, relations
         relationship_cache: Optional pre-built relationship index (see
                            ``Person.get_family_tree_data``) to avoid per-person
                            database queries when serialising many people.
+        include_private: If True, includes research notes and internal flags.
     """
     if not person:
         return None
@@ -232,36 +255,45 @@ def serialize_person(person, sources_cache=None, include_details=True, relations
             'birth_date_formatted': format_date_with_precision(person.birth_date, person.birth_date_precision or 'exact', person.birth_date_granularity or 'day'),
             'birth_date_precision': person.birth_date_precision,
             'birth_date_granularity': person.birth_date_granularity,
-            'birth_date_source': serialize_source(person.birth_date_source, sources_cache),
+            'birth_date_source': serialize_source(person.birth_date_source, sources_cache, include_private),
             'birth_location': resolve_location_full_name(person.birth_location, person.birth_date) if person.birth_location else None,
-            'birth_location_source': serialize_source(person.birth_location_source, sources_cache),
+            'birth_location_source': serialize_source(person.birth_location_source, sources_cache, include_private),
             'death_date': person.death_date.isoformat() if person.death_date else None,
             'death_date_formatted': format_date_with_precision(person.death_date, person.death_date_precision or 'exact', person.death_date_granularity or 'day'),
             'death_date_precision': person.death_date_precision,
             'death_date_granularity': person.death_date_granularity,
-            'death_date_source': serialize_source(person.death_date_source, sources_cache),
+            'death_date_source': serialize_source(person.death_date_source, sources_cache, include_private),
             'death_location': resolve_location_full_name(person.death_location, person.death_date) if person.death_location else None,
-            'death_location_source': serialize_source(person.death_location_source, sources_cache),
+            'death_location_source': serialize_source(person.death_location_source, sources_cache, include_private),
             'burial_location': resolve_location_full_name(person.burial_location, person.death_date) if person.burial_location else None,
-            'burial_location_source': serialize_source(person.burial_location_source, sources_cache),
-            'description_sources': [serialize_source(s, sources_cache)['id'] for s in person.description_sources.all()],
+            'burial_location_source': serialize_source(person.burial_location_source, sources_cache, include_private),
+            'description_sources': [serialize_source(s, sources_cache, include_private)['id'] for s in person.description_sources.all()],
             'relationships': relationships_data,
             'family_tree': person.get_family_tree_data(relationship_cache=relationship_cache),
             'tags': serialize_tags(person.tags),
-            'attachments': serialize_attachments(person.attachments),
+            'attachments': serialize_attachments(person.attachments, include_private),
             'disputed_facts': serialize_disputed_facts(person.disputed_facts, sources_cache),
             'public_comments': serialize_public_comments(person.public_comments),
             'research_questions': serialize_research_questions(person.research_questions, request_user)
         })
+
+        if include_private:
+            data.update({
+                'image_path': _safe_image_url(person.image, relative=True),
+                'researcher_notes': person.researcher_notes,
+                'needs_research': person.needs_research,
+                'is_private': person.is_private,
+                'owner': person.owner.username if person.owner else None,
+            })
     
     return data
 
-def serialize_story(story, request_user=None):
+def serialize_story(story, request_user=None, include_private=False):
     """
     Serializes a Story with owner and tags.
     Note: uses ``'title'`` (not ``'name'``) to match the Story model field.
     """
-    return {
+    data = {
         'id': story.id,
         'title': story.title,
         'description': story.description,
@@ -272,7 +304,15 @@ def serialize_story(story, request_user=None):
         'research_questions': serialize_research_questions(story.research_questions, request_user)
     }
 
-def serialize_event(event, sources_cache=None, request_user=None):
+    if include_private:
+        data.update({
+            'researcher_notes': story.researcher_notes,
+            'needs_research': story.needs_research,
+            'is_private': story.is_private,
+        })
+    return data
+
+def serialize_event(event, sources_cache=None, request_user=None, include_private=False):
     """
     Serializes a TimelineEvent. Note that 'stories' list is initialized 
     but must be cross-referenced by the view for sequence overrides.
@@ -283,17 +323,27 @@ def serialize_event(event, sources_cache=None, request_user=None):
             is_stale = True
 
     # Collect main image first, then additional images.
-    # _safe_image_url handles the case where the file has been deleted from disk.
     images = []
     main_url = _safe_image_url(event.image)
+    main_path = _safe_image_url(event.image, relative=True) if include_private else None
+    
     if main_url:
-        images.append({'url': main_url, 'caption': event.title})
+        images.append({
+            'url': main_url, 
+            'path': main_path,
+            'caption': event.title
+        })
 
     featured_url = main_url
     for img in event.additional_images.all():
         url = _safe_image_url(img.image)
+        path = _safe_image_url(img.image, relative=True) if include_private else None
         if url and url != featured_url:
-            images.append({'url': url, 'caption': img.caption or event.title})
+            images.append({
+                'url': url, 
+                'path': path,
+                'caption': img.caption or event.title
+            })
 
     data = {
         'id': event.id,
@@ -304,12 +354,12 @@ def serialize_event(event, sources_cache=None, request_user=None):
         'start_formatted': format_date_with_precision(event.start_date, event.start_date_precision or 'exact', event.start_date_granularity or 'day'),
         'start_precision': event.start_date_precision,
         'start_granularity': event.start_date_granularity,
-        'start_source': serialize_source(event.start_date_source, sources_cache),
+        'start_source': serialize_source(event.start_date_source, sources_cache, include_private),
         'end': event.end_date.isoformat() if event.end_date else None,
         'end_formatted': format_date_with_precision(event.end_date, event.end_date_precision or 'exact', event.end_date_granularity or 'day') if event.end_date else None,
         'end_precision': event.end_date_precision,
         'end_granularity': event.end_date_granularity,
-        'end_source': serialize_source(event.end_date_source, sources_cache),
+        'end_source': serialize_source(event.end_date_source, sources_cache, include_private),
         'owner': event.owner.username if event.owner else None,
         'cloned_from': {
             'id': event.cloned_from.id,
@@ -319,22 +369,30 @@ def serialize_event(event, sources_cache=None, request_user=None):
         'is_auto_generated': getattr(event, 'is_auto_generated', False),
         'status': event.status,
         'timelines': [{'id': tl.id, 'name': tl.name} for tl in event.timelines.all()],
-        'description_sources': [serialize_source(s, sources_cache)['id'] for s in event.description_sources.all()],
+        'description_sources': [serialize_source(s, sources_cache, include_private)['id'] for s in event.description_sources.all()],
         'tags': serialize_tags(event.tags),
-        'attachments': serialize_attachments(event.attachments),
+        'attachments': serialize_attachments(event.attachments, include_private),
         'disputed_facts': serialize_disputed_facts(event.disputed_facts, sources_cache),
         'images': images,
         'image': featured_url,
         'link': event.link,
-        'location': serialize_location(event.location, sources_cache, event.start_date, request_user),
-        'location_source': serialize_source(event.location_source, sources_cache),
-        'end_location': serialize_location(event.end_location, sources_cache, event.end_date or event.start_date, request_user),
-        'end_location_source': serialize_source(event.end_location_source, sources_cache),
-        'people': [serialize_person(p, include_details=False, request_user=request_user) for p in event.people.all()],
+        'location': serialize_location(event.location, sources_cache, event.start_date, request_user, include_private),
+        'location_source': serialize_source(event.location_source, sources_cache, include_private),
+        'end_location': serialize_location(event.end_location, sources_cache, event.end_date or event.start_date, request_user, include_private),
+        'end_location_source': serialize_source(event.end_location_source, sources_cache, include_private),
+        'people': [serialize_person(p, include_details=False, request_user=request_user, include_private=include_private) for p in event.people.all()],
         'description': event.description,
         'stories': [],
         'public_comments': serialize_public_comments(event.public_comments),
         'research_questions': serialize_research_questions(event.research_questions, request_user)
     }
+
+    if include_private:
+        data.update({
+            'image_path': main_path,
+            'researcher_notes': event.researcher_notes,
+            'needs_research': event.needs_research,
+            'is_private': event.is_private,
+        })
     
     return data

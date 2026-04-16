@@ -18,6 +18,7 @@ urlpatterns = [
     path('api/history/<str:model_name>/<int:obj_id>/', views.get_history, name='get_history'),
     path('api/network-graph/', views.network_graph_api, name='network_graph_api'),
     path('api/export-json/', views.export_json, name='export_json'),
+    path('api/backup-json/', views.backup_all_json, name='backup_json'),
     path('api/export-gedcom/', views.export_gedcom, name='export_gedcom'),
     path('api/export-pdf/', views.export_pdf, name='export_pdf'),
     path('api/global-search/', views.global_search_json, name='global_search_json'),

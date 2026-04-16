@@ -44,7 +44,7 @@
         </div>
         {% endif %}
 
-        <form method="post" enctype="multipart/form-data" class="space-y-6">
+        <form method="post" enctype="multipart/form-data" class="space-y-6 pb-6 border-b border-gray-100">
             {% csrf_token %}
 
             <div>
@@ -98,6 +98,32 @@
                 </div>
             </div>
         </form>
+
+        <div class="mt-8 pt-6 border-t border-gray-100">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Data Management & Backups</h3>
+            <div class="grid grid-cols-1 gap-4">
+                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <div>
+                        <p class="text-sm font-bold text-gray-900">Researcher Backup (Complete Archive)</p>
+                        <p class="text-xs text-gray-600">Full export including private notes, media links, and status flags.</p>
+                    </div>
+                    <a href="{% url 'backup_json' %}" class="inline-flex items-center px-3 py-2 border border-blue-600 text-sm font-medium rounded-md text-blue-600 bg-white hover:bg-blue-50">
+                        <i class="fa-solid fa-download mr-1.5"></i> Export Backup
+                    </a>
+                </div>
+                
+                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <div>
+                        <p class="text-sm font-bold text-gray-900">Public Portable Export</p>
+                        <p class="text-xs text-gray-600">Current filtered view only. No private notes.</p>
+                    </div>
+                    <a href="{% url 'export_json' %}" class="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                        <i class="fa-solid fa-share-nodes mr-1.5"></i> Export Public
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
     </div>
 
     <!-- AI Prompt Modal -->

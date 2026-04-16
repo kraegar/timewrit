@@ -927,25 +927,25 @@ def network_graph_api(request):
 
 import json
 
-def export_json(request):
+@user_passes_test(lambda u: u.is_staff)
+def backup_all_json(request):
     """
-    Exports the filtered timeline events and their comprehensive details as a JSON file.
-    Upgraded to 'Full Archive' mode using high-fidelity serialization.
+    Exports a high-fidelity 'Full Archive' including ALL events, people, locations,
+    and private researcher notes. Staff only.
     """
-    events = _get_filtered_events(request)
+    events = TimelineEvent.objects.all().select_related('owner', 'location', 'end_location')
     sources_cache = {}
     
-    # We use the same serialization as the main API to ensure consistency
     serialized_events = []
     
-    # Bulk-fetch StoryEvents upfront to avoid N+1 query
+    # Bulk-fetch StoryEvents
     from collections import defaultdict
     story_events_by_event = defaultdict(list)
-    for se in StoryEvent.objects.filter(event__in=events).select_related('story'):
+    for se in StoryEvent.objects.all().select_related('story'):
         story_events_by_event[se.event_id].append(se)
 
     for e in events:
-        item = serialize_event(e, sources_cache=sources_cache, request_user=request.user)
+        item = serialize_event(e, sources_cache=sources_cache, request_user=request.user, include_private=True)
         for se in story_events_by_event[e.id]:
             story = se.story
             item['stories'].append({
@@ -956,16 +956,64 @@ def export_json(request):
             })
         serialized_events.append(item)
     
-    # Include all required lookup entities for a truly portable archive
+    # Also ensure we serialize ALL people and locations for a true backup
+    entities = {
+        'locations': [serialize_location(l, sources_cache, include_private=True) for l in Location.objects.all()],
+        'people': [serialize_person(p, sources_cache, include_private=True) for p in Person.objects.all()],
+        'stories': [serialize_story(s, request_user=request.user, include_private=True) for s in Story.objects.all()],
+        'sources': list(sources_cache.values()),
+    }
+
+    export_payload = {
+        'version': '3.0',
+        'type': 'high-fidelity-backup',
+        'export_date': datetime.now().isoformat(),
+        'events': serialized_events,
+        'entities': entities,
+    }
+    
+    response = HttpResponse(json.dumps(export_payload, indent=2), content_type='application/json')
+    response['Content-Disposition'] = f'attachment; filename="timewrit_full_backup_{datetime.now().strftime("%Y%md_%H%M")}.json"'
+    return response
+
+def export_json(request):
+    """
+    Exports the filtered timeline events (Public only if logged out)
+    for portability.
+    """
+    events = _get_filtered_events(request)
+    sources_cache = {}
+    
+    serialized_events = []
+    
+    from collections import defaultdict
+    story_events_by_event = defaultdict(list)
+    for se in StoryEvent.objects.filter(event__in=events).select_related('story'):
+        story_events_by_event[se.event_id].append(se)
+
+    for e in events:
+        # include_private=False ensuring public portability
+        item = serialize_event(e, sources_cache=sources_cache, request_user=request.user, include_private=False)
+        for se in story_events_by_event[e.id]:
+            story = se.story
+            item['stories'].append({
+                'id': story.id,
+                'title': story.title,
+                'color': story.color,
+                'sequence': se.sequence
+            })
+        serialized_events.append(item)
+    
     export_payload = {
         'version': '2.0',
+        'type': 'portable-export',
         'export_date': datetime.now().isoformat(),
         'events': serialized_events,
         'sources': list(sources_cache.values()),
     }
     
     response = HttpResponse(json.dumps(export_payload, indent=2), content_type='application/json')
-    response['Content-Disposition'] = 'attachment; filename="timeline_archive.json"'
+    response['Content-Disposition'] = 'attachment; filename="timeline_portable.json"'
     return response
 
 def export_gedcom(request):

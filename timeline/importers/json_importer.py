@@ -60,21 +60,42 @@ class JsonEventImporter:
         return parse_date(str(raw))
 
     def create_record(self, data: Dict[str, Any]):
-        if not data.get('title'):
+        if not data.get('title') and not data.get('content'):
             raise ValueError("Event is missing a title.")
+
+        title = data.get('title') or data.get('content')
 
         location = None
         if data.get('location'):
-            location_name = data['location'].strip() if isinstance(data['location'], str) else data['location'].get('name', '').strip()
+            loc_data = data['location']
+            location_name = loc_data.strip() if isinstance(loc_data, str) else loc_data.get('name', '').strip()
             if location_name:
-                location, _ = Location.objects.get_or_create(name=location_name)
+                location, created = Location.objects.get_or_create(name=location_name)
+                if created and isinstance(loc_data, dict):
+                    # Deep restore for locations
+                    location.description = loc_data.get('description', '')
+                    location.researcher_notes = loc_data.get('researcher_notes', '')
+                    location.needs_research = loc_data.get('needs_research', False)
+                    location.is_private = loc_data.get('is_private', False)
+                    if loc_data.get('image_path'):
+                        location.image = loc_data['image_path']
+                    location.save()
 
         people = []
         if data.get('people'):
             for p_dict in data['people']:
                 person_name = p_dict.get('name', '').strip() if isinstance(p_dict, dict) else str(p_dict).strip()
                 if person_name:
-                    person, _ = Person.objects.get_or_create(name=person_name)
+                    person, created = Person.objects.get_or_create(name=person_name)
+                    if created and isinstance(p_dict, dict):
+                        # Deep restore for people
+                        person.description = p_dict.get('description', '')
+                        person.researcher_notes = p_dict.get('researcher_notes', '')
+                        person.needs_research = p_dict.get('needs_research', False)
+                        person.is_private = p_dict.get('is_private', False)
+                        if p_dict.get('image_path'):
+                            person.image = p_dict['image_path']
+                        person.save()
                     people.append(person)
 
         tags = []
@@ -82,39 +103,46 @@ class JsonEventImporter:
             for t_dict in data['tags']:
                 tag_name = t_dict.get('name', '').strip() if isinstance(t_dict, dict) else str(t_dict).strip()
                 if tag_name:
-                    tag, _ = Tag.objects.get_or_create(
+                    tag, created = Tag.objects.get_or_create(
                         name=tag_name,
                         defaults={'color': t_dict.get('color', 'bg-gray-500') if isinstance(t_dict, dict) else 'bg-gray-500'}
                     )
+                    if created and isinstance(t_dict, dict):
+                        tag.researcher_notes = t_dict.get('researcher_notes', '')
+                        tag.needs_research = t_dict.get('needs_research', False)
+                        tag.save()
                     tags.append(tag)
 
         # Parse dates
         start_date = self._resolve_date(data, 'start_date')
         if not start_date:
-            # Try the 'start' key (vis.js ISO format from serialised events)
             start_date = self._resolve_date(data, 'start')
         if not start_date:
-            start_date_str = '1900-01-01'
-            start_date = parse_date(start_date_str)
+            start_date = parse_date('1900-01-01')
 
         end_date = self._resolve_date(data, 'end_date')
         if not end_date:
             end_date = self._resolve_date(data, 'end')
 
-        try:
-            event = TimelineEvent.objects.create(
-                title=data['title'],
-                description=data.get('description', ''),
-                start_date=start_date,
-                end_date=end_date,
-                location=location,
-                owner=self.user if self.user and self.user.is_authenticated else None
-            )
-        except Exception as e:
-            print(f"FAILED TO CREATE EVENT: {data}")
-            print(f"start_date was: {start_date}")
-            raise e
-            
+        event = TimelineEvent.objects.create(
+            title=title,
+            description=data.get('description', ''),
+            start_date=start_date,
+            end_date=end_date,
+            location=location,
+            owner=self.user if self.user and self.user.is_authenticated else None,
+            # Pro fields
+            researcher_notes=data.get('researcher_notes', ''),
+            needs_research=data.get('needs_research', False),
+            is_private=data.get('is_private', False),
+            status=data.get('status', 'unverified')
+        )
+        
+        # Restoration of image path if present
+        if data.get('image_path'):
+            event.image = data['image_path']
+            event.save()
+
         if people:
             event.people.set(people)
         if tags:
@@ -123,17 +151,49 @@ class JsonEventImporter:
         # Handle Stories
         if data.get('stories'):
             for s_dict in data['stories']:
-                story_name = s_dict.get('name', '') or s_dict.get('title', '')
-                story_name = story_name.strip() if story_name else ''
+                story_name = (s_dict.get('name', '') or s_dict.get('title', '')).strip()
                 if story_name:
                     story, _ = Story.objects.get_or_create(
-                        name=story_name,
-                        owner=self.user if self.user and self.user.is_authenticated else None
+                        title=story_name,
+                        defaults={
+                            'owner': self.user if self.user and self.user.is_authenticated else None,
+                            'color': s_dict.get('color', '#8B5CF6')
+                        }
                     )
                     StoryEvent.objects.get_or_create(
                         story=story,
                         event=event,
                         defaults={'sequence': s_dict.get('sequence', 0)}
                     )
+
+        # Handle Additional Images
+        if data.get('images'):
+            from ..models import EventImage
+            for img_data in data['images']:
+                # The path field is our new High-Fidelity key
+                img_path = img_data.get('path')
+                if img_path:
+                    EventImage.objects.get_or_create(
+                        event=event,
+                        image=img_path,
+                        defaults={'caption': img_data.get('caption', '')}
+                    )
+
+        # Handle Attachments
+        if data.get('attachments'):
+            from ..models import Attachment
+            for attach_data in data['attachments']:
+                rel_path = attach_data.get('relative_path')
+                if rel_path:
+                    attachment, _ = Attachment.objects.get_or_create(
+                        file=rel_path,
+                        defaults={
+                            'title': attach_data.get('title', 'Imported Attachment'),
+                            'file_type': attach_data.get('type', 'other'),
+                            'description': attach_data.get('description', ''),
+                            'owner': self.user if self.user and self.user.is_authenticated else None
+                        }
+                    )
+                    attachment.events.add(event)
             
         return event
