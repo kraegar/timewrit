@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 import os
+import sys
 from pathlib import Path
 from dotenv import load_dotenv
 import dj_database_url
@@ -39,9 +40,9 @@ def pull_secrets_from_manager():
                 response = client.access_secret_version(request={"name": version_path})
                 payload = response.payload.data.decode("UTF-8")
                 os.environ[secret_name] = payload
-        except Exception:
-            # Silently fail if Secret Manager is not available or auth fails
-            # This ensures local development stays smooth
+        except Exception as e:
+            # Troubleshooting: Print the error to logs
+            sys.stderr.write(f"--- SECRET MANAGER ERROR: {str(e)} ---\n")
             pass
 
 # Perform Secret Manager pull before other settings are evaluated
@@ -58,7 +59,19 @@ SECRET_KEY = 'django-insecure-z9ko8q%m=x!=&q^93s#0x0*dktfwd@170*qtrwrj#ax9k5ze(+
 DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
 # ALLOWED_HOSTS can be a comma-separated string in .env
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '*').split(',')
+ALLOWED_HOSTS = [host.strip() for host in os.getenv('ALLOWED_HOSTS', '*').split(',') if host.strip()]
+
+# Production Hardening
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_SSL_REDIRECT = True
+    # Portable logic for trusted origins
+    CSRF_TRUSTED_ORIGINS = [f"https://{host}" for host in ALLOWED_HOSTS if host != '*']
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+
+sys.stderr.write(f"--- BOOTING WITH ALLOWED_HOSTS: {ALLOWED_HOSTS} ---\n")
+sys.stderr.write(f"--- DATABASE DETECTED: {'Yes' if os.getenv('DATABASE_URL') else 'No'} ---\n")
 
 
 # Application definition
@@ -211,6 +224,7 @@ else:
 
 # Static files & Media Storage
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 
 if os.getenv('USE_GCS', 'False') == 'True':
