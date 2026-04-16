@@ -83,6 +83,16 @@ def pull_secrets_from_manager():
                     if val:
                         os.environ[oauth] = val
 
+            # 3. Connection Test (Internal verification)
+            db_url = os.getenv('DATABASE_URL')
+            if db_url:
+                try:
+                    import dj_database_url
+                    db_config = dj_database_url.parse(db_url)
+                    sys.stderr.write(f"--- DATABASE READY FOR: {db_config.get('NAME')} ---\n")
+                except Exception as e:
+                    sys.stderr.write(f"--- DATABASE CONFIG ERROR: {str(e)} ---\n")
+
         except Exception as e:
             sys.stderr.write(f"--- SECRET MANAGER ERROR: {str(e)} ---\n")
             pass
@@ -102,14 +112,17 @@ SECRET_KEY = 'django-insecure-z9ko8q%m=x!=&q^93s#0x0*dktfwd@170*qtrwrj#ax9k5ze(+
 DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
 # ALLOWED_HOSTS can be a comma-separated string in .env
+# Include internal Cloud Run domains and localhost for health checks
 ALLOWED_HOSTS = [host.strip() for host in os.getenv('ALLOWED_HOSTS', '*').split(',') if host.strip()]
+ALLOWED_HOSTS += ['localhost', '127.0.0.1', '.a.run.app']
 
 # Production Hardening
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-    SECURE_SSL_REDIRECT = True
+    # Use False to avoid health check redirect loops; rely on LB for HTTPS
+    SECURE_SSL_REDIRECT = False
     # Portable logic for trusted origins
-    CSRF_TRUSTED_ORIGINS = [f"https://{host}" for host in ALLOWED_HOSTS if host != '*']
+    CSRF_TRUSTED_ORIGINS = [f"https://{host}" for host in ALLOWED_HOSTS if host != '*' and not host.startswith('.')]
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
 
