@@ -53,7 +53,7 @@ jobs:
           flags: |
             --min-instances=1
             --add-cloudsql-instances=${{ env.PROJECT_ID }}:${{ env.REGION }}:timewrit-db
-            --set-env-vars=USE_SECRET_MANAGER=True,USE_GOOGLE_OAUTH=True,USE_GCS=True
+            --set-env-vars=GCP_PROJECT_ID=${{ env.PROJECT_ID }},ALLOWED_HOSTS=${{ secrets.ALLOWED_HOSTS }},USE_SECRET_MANAGER=True,USE_GOOGLE_OAUTH=True,USE_GCS=True
 
       - name: Show Output
         run: echo ${{ steps.deploy.outputs.url }}
