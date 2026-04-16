@@ -26,6 +26,7 @@ load_dotenv(os.path.join(BASE_DIR, '.env'), override=True)
 def pull_secrets_from_manager():
     """
     Pulls secrets from Google Secret Manager conditionally based on enabled features.
+    Ensures safe URL encoding for database credentials.
     """
     if os.getenv('USE_SECRET_MANAGER', 'False') == 'True':
         project_id = os.getenv('GCP_PROJECT_ID')
@@ -42,20 +43,19 @@ def pull_secrets_from_manager():
                     response = client.access_secret_version(request={"name": name})
                     val = response.payload.data.decode("UTF-8").strip()
                     
-                    # Smart Repair: If it's the DATABASE_URL, encode the password component
-                    if secret_name == 'DATABASE_URL' and val and '://' in val:
+                    # Robust URL Repair for DATABASE_URL with special characters
+                    if secret_name == 'DATABASE_URL' and val and '://' in val and '@/' in val:
                         try:
-                            # Split at the last '@' which separates credentials from host/socket
-                            creds, at, host = val.rpartition('@')
-                            if at:
-                                scheme, sep, user_pass = creds.partition('://')
-                                user, sep_p, password = user_pass.partition(':')
-                                if sep_p:
-                                    from urllib.parse import quote_plus
-                                    val = f"{scheme}{sep}{user}:{quote_plus(password)}@{host}"
+                            from urllib.parse import quote
+                            # Split into 'schema://user:pass' and 'host/socket_info'
+                            creds_part, at_socket, rest = val.partition('@/')
+                            scheme, sep, user_pass = creds_part.partition('://')
+                            user, sep_p, password = user_pass.partition(':')
+                            if sep_p:
+                                # Specifically encode ONLY the password component
+                                val = f"{scheme}{sep}{user}:{quote(password)}@{at_socket}{rest}"
                         except Exception:
-                            pass # Fallback to original if repair fails
-                            
+                            pass 
                     return val
                 except Exception:
                     return None
@@ -66,7 +66,7 @@ def pull_secrets_from_manager():
                 if val:
                     os.environ[core] = val
 
-            # 2. OPTIONAL: Only fetch if the feature flag is enabled
+            # 2. OPTIONAL Features
             if os.getenv('USE_GCS', 'False') == 'True':
                 val = get_secret('GS_BUCKET_NAME')
                 if val:
@@ -89,6 +89,7 @@ def pull_secrets_from_manager():
 
 # Perform Secret Manager pull before other settings are evaluated
 pull_secrets_from_manager()
+
 
 
 # Quick-start development settings - unsuitable for production
