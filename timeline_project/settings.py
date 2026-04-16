@@ -41,22 +41,7 @@ def pull_secrets_from_manager():
                 try:
                     name = f"projects/{project_id}/secrets/{secret_name}/versions/latest"
                     response = client.access_secret_version(request={"name": name})
-                    val = response.payload.data.decode("UTF-8").strip()
-                    
-                    # Robust URL Repair for DATABASE_URL with special characters
-                    if secret_name == 'DATABASE_URL' and val and '://' in val and '@/' in val:
-                        try:
-                            from urllib.parse import quote
-                            # Split into 'schema://user:pass' and 'host/socket_info'
-                            creds_part, at_socket, rest = val.partition('@/')
-                            scheme, sep, user_pass = creds_part.partition('://')
-                            user, sep_p, password = user_pass.partition(':')
-                            if sep_p:
-                                # Specifically encode ONLY the password component
-                                val = f"{scheme}{sep}{user}:{quote(password)}{at_socket}{rest}"
-                        except Exception:
-                            pass 
-                    return val
+                    return response.payload.data.decode("UTF-8").strip()
                 except Exception:
                     return None
 
@@ -99,24 +84,19 @@ pull_secrets_from_manager()
 SECRET_KEY = 'django-insecure-z9ko8q%m=x!=&q^93s#0x0*dktfwd@170*qtrwrj#ax9k5ze(+'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-# FORCING DEBUG TRUE TEMPORARILY TO CAPTURE SILENT 500 ERROR
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
-# ALLOWED_HOSTS wildcard to bypass Load Balancer host mismatches temporarily
-ALLOWED_HOSTS = ['*']
+# ALLOWED_HOSTS derived from Secret Manager / Environment
+ALLOWED_HOSTS = [host.strip() for host in os.getenv('ALLOWED_HOSTS', '').split(',') if host.strip()]
+ALLOWED_HOSTS += ['localhost', '127.0.0.1', '.a.run.app']
 
 # Production Hardening
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-    # Use False to avoid health check redirect loops; rely on LB for HTTPS
     SECURE_SSL_REDIRECT = False
-    # Portable logic for trusted origins
     CSRF_TRUSTED_ORIGINS = [f"https://{host}" for host in ALLOWED_HOSTS if host != '*' and not host.startswith('.')]
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
-
-sys.stderr.write(f"--- BOOTING WITH ALLOWED_HOSTS: {ALLOWED_HOSTS} ---\n")
-sys.stderr.write(f"--- DATABASE DETECTED: {'Yes' if os.getenv('DATABASE_URL') else 'No'} ---\n")
 
 
 # Application definition
@@ -206,15 +186,40 @@ TEMPLATES = [
 WSGI_APPLICATION = 'timeline_project.wsgi.application'
 
 
-# Database
-# Using dj-database-url for environment-based configuration.
-# Defaults to local SQLite if DATABASE_URL is not provided.
-DATABASES = {
-    'default': dj_database_url.config(
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
-        conn_max_age=60,
-    )
-}
+# Database configuration
+# Manual parsing to handle special characters (#, %) without URL encoding issues
+DATABASE_URL_STR = os.getenv('DATABASE_URL')
+if DATABASE_URL_STR and '@/' in DATABASE_URL_STR:
+    try:
+        # Split: postgres://user:pass@/dbname?host=/cloudsql/instance
+        creds_part, _, rest = DATABASE_URL_STR.partition('@/')
+        scheme, _, user_pass = creds_part.partition('://')
+        user, _, password = user_pass.partition(':')
+        db_name, _, params = rest.partition('?')
+        host = ""
+        if 'host=' in params:
+            host = params.split('host=')[1].split('&')[0]
+            
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.postgresql',
+                'NAME': db_name,
+                'USER': user,
+                'PASSWORD': password,
+                'HOST': host,
+                'PORT': '',
+                'CONN_MAX_AGE': 600,
+            }
+        }
+    except Exception:
+        DATABASES = {'default': dj_database_url.config(default=DATABASE_URL_STR, conn_max_age=600)}
+else:
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=os.getenv('DATABASE_URL'),
+            conn_max_age=600,
+        )
+    }
 
 
 # Password validation
