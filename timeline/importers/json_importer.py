@@ -29,10 +29,15 @@ class JsonEventImporter:
         created_count = 0
         errors = []
 
-        if not isinstance(parsed_data, list):
-            return 0, ["JSON payload must be a list of event objects."]
+        # Support 'Full Archive' format (dict) and legacy 'List' format
+        if isinstance(parsed_data, dict) and 'events' in parsed_data:
+            event_list = parsed_data['events']
+        elif isinstance(parsed_data, list):
+            event_list = parsed_data
+        else:
+            return 0, ["JSON payload must be a list of event objects or a valid Archive dictionary."]
 
-        for row in parsed_data:
+        for row in event_list:
             try:
                 self.create_record(row)
                 created_count += 1
