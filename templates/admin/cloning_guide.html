@@ -1,0 +1,74 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+<div id="content-main">
+    <h1>Cloning & Copying Guide</h1>
+    <div class="module">
+        <h2>Data Independence</h2>
+        <p>
+            The Timeline application allows you to take data from other researchers (like the public 'aakens'
+            collection)
+            and create independent copies in your own collection. This ensures you can edit descriptions, add private
+            notes,
+            or change dates without affecting the shared source of truth.
+        </p>
+
+        <div style="background: #e3f2fd; border-left: 5px solid #2563eb; padding: 15px; margin: 20px 0;">
+            <strong>🚀 New: Full Deep Copy for Timelines</strong><br>
+            Timelines can now be "Deep Copied," which automatically replicates every event within that timeline into
+            your own collection.
+        </div>
+
+        <h2>Copying Options</h2>
+        <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+            <thead>
+                <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
+                    <th style="padding: 12px; text-align: left;">Action</th>
+                    <th style="padding: 12px; text-align: left;">Behavior</th>
+                    <th style="padding: 12px; text-align: left;">Best Used For...</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr style="border-bottom: 1px solid #dee2e6;">
+                    <td style="padding: 12px;"><strong>💾 Save a Copy</strong></td>
+                    <td style="padding: 12px;">Found in the detail view of items you don't own. Makes an instant
+                        standalone copy.</td>
+                    <td>When you're browsing research and think "I want this in my collection."</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #dee2e6;">
+                    <td style="padding: 12px;"><strong>🚀 Full Deep Copy</strong></td>
+                    <td style="padding: 12px;">Available as an Admin Action for Timelines. Duplicates the timeline AND
+                        all its events.</td>
+                    <td>Starting a new research branch based on an existing project.</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #dee2e6;">
+                    <td style="padding: 12px;"><strong>📋 Quick Copy</strong></td>
+                    <td style="padding: 12px;">Found in list views. A simple duplication of the selected record(s).</td>
+                    <td>Bulk-copying People or Locations to your private database.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2 style="margin-top: 30px;">How to Create Your Copy</h2>
+        <ul>
+            <li><strong>From a Detail View:</strong> Click the green <strong>"Save a Copy"</strong> button at the top of
+                any record owned by another user.</li>
+            <li><strong>From a List View:</strong> Scroll to the <strong>"Copy"</strong> column and click <strong>"Quick
+                    Copy"</strong>.</li>
+            <li><strong>In Bulk:</strong> Select multiple items via checkboxes, choose <strong>"Quick Copy selected to
+                    my collection"</strong> in the Actions dropdown, and click <strong>Go</strong>.</li>
+        </ul>
+
+        <h2>Collaboration Best Practices</h2>
+        <p>
+            By default, the main view at <code>/</code> shows research from all users.
+            Only create a copy if you intend to:
+        </p>
+        <ol>
+            <li>Add private biographical notes that shouldn't be shared.</li>
+            <li>Adjust dates or descriptions based on your own specialized research.</li>
+            <li>Combine events from multiple sources into a new, unique timeline.</li>
+        </ol>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Vis.js Test with API</title>
+    <script src="https://unpkg.com/vis-timeline@latest/standalone/umd/vis-timeline-graph2d.min.js"></script>
+    <link href="https://unpkg.com/vis-timeline@latest/styles/vis-timeline-graph2d.min.css" rel="stylesheet"
+        type="text/css" />
+    <style type="text/css">
+        #visualization {
+            width: 100%;
+            height: 400px;
+            border: 1px solid lightgray;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Vis.js API Test</h1>
+    <div id="visualization"></div>
+
+    <script type="text/javascript">
+        var container = document.getElementById('visualization');
+        var options = {};
+        var timeline = new vis.Timeline(container, new vis.DataSet([]), options);
+
+        console.log('Fetching from /api/events/');
+        fetch('/api/events/')
+            .then(res => res.json())
+            .then(data => {
+                console.log('API Data:', data);
+                var items = new vis.DataSet(data);
+                timeline.setItems(items);
+                timeline.fit();
+            })
+            .catch(err => console.error(err));
+    </script>
+</body>
+
+</html>

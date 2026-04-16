@@ -1,0 +1,50 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static admin_modify %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
+    &rsaquo; <a href="{% url 'admin:app_list' app_label='timeline' %}">Timeline</a>
+    &rsaquo; GEDCOM Import
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    <form enctype="multipart/form-data" method="POST">
+        {% csrf_token %}
+        <div>
+            <fieldset class="module aligned">
+                <h2>Import GEDCOM File</h2>
+                <div class="description" style="padding: 10px; color: #666;">
+                    Upload a .ged file (GEDCOM 5.5.1). All imported individuals, families, and sources will be added to
+                    your private collection and tagged as "Imported via GEDCOM".
+                </div>
+                <div class="form-row field-timeline">
+                    <div>
+                        <label for="id_timeline">Target Timeline:</label>
+                        <select name="timeline_id" id="id_timeline">
+                            <option value="">---------</option>
+                            {% for timeline in timelines %}
+                            <option value="{{ timeline.pk }}">{{ timeline.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="help">
+                            Optional. Birth and death events for imported individuals will be added to this timeline.
+                        </div>
+                    </div>
+                </div>
+                <div class="form-row field-file">
+                    <div>
+                        <label class="required" for="id_file">GEDCOM file:</label>
+                        <input type="file" name="gedcom_file" id="id_file" accept=".ged" required>
+                    </div>
+                </div>
+            </fieldset>
+            <div class="submit-row">
+                <input type="submit" value="Upload and Import" class="default" name="_save">
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

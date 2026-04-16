@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<style>
+    .prose h2 {
+        margin-top: 2rem;
+        margin-bottom: 1rem;
+        font-weight: 700;
+        font-size: 1.5rem;
+        color: #111827;
+    }
+
+    .prose h3 {
+        margin-top: 1.5rem;
+        margin-bottom: 0.75rem;
+        font-weight: 600;
+        font-size: 1.25rem;
+        color: #374151;
+    }
+
+    .prose p {
+        margin-bottom: 1rem;
+        line-height: 1.75;
+    }
+
+    .prose ul {
+        list-style-type: disc;
+        padding-left: 1.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .prose li {
+        margin-bottom: 0.5rem;
+    }
+
+    .prose img {
+        border-radius: 0.5rem;
+        border: 1px solid #e5e7eb;
+        margin: 2rem 0;
+        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+    }
+
+    .prose strong {
+        font-weight: 600;
+        color: #111827;
+    }
+
+    .prose blockquote {
+        border-left: 4px solid #3B82F6;
+        padding-left: 1rem;
+        font-style: italic;
+        color: #4B5563;
+        margin: 1.5rem 0;
+    }
+
+    @media (max-width: 1023px) {
+        .help-sidebar {
+            display: none !important;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block main_class %}w-full h-full p-0{% endblock %}
+
+{% block content %}
+<div class="flex flex-grow min-h-0" style="display: flex !important; min-height: 0 !important;">
+    <!-- Sidebar -->
+    <aside class="help-sidebar flex-shrink-0 bg-gray-50 border-r border-gray-200 overflow-y-auto"
+        style="width: 320px !important; min-width: 320px !important;">
+        <div class="p-6">
+            <a href="{% url 'help_index' %}"
+                class="flex items-center text-blue-600 font-semibold mb-8 hover:text-blue-800 transition-colors">
+                <i class="fa-solid fa-arrow-left mr-2"></i> Back to Index
+            </a>
+
+            <nav class="space-y-8">
+                {% for cat in categories %}
+                <div>
+                    <h4 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">{{ cat.name }}</h4>
+                    <ul class="space-y-2">
+                        {% for t in cat.topics.all %}
+                        {% if t.is_published %}
+                        <li>
+                            <a href="{% url 'help_topic_detail' t.slug %}"
+                                class="block text-sm py-1 transition-colors {% if t.id == topic.id %}text-blue-600 font-bold{% else %}text-gray-600 hover:text-gray-900{% endif %}">
+                                {{ t.title }}
+                            </a>
+                        </li>
+                        {% endif %}
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endfor %}
+            </nav>
+
+            <div class="mt-12 pt-8 border-t border-gray-100">
+                <a href="/"
+                    class="flex items-center justify-center w-full px-4 py-2 border border-blue-600 text-blue-600 font-bold rounded-lg hover:bg-blue-50 transition-colors">
+                    <i class="fa-solid fa-right-from-bracket mr-2"></i> Exit Help
+                </a>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <article class="flex-grow overflow-y-auto bg-white">
+        <div class="max-w-4xl mx-auto py-12 px-8">
+            <nav class="lg:hidden mb-8">
+                <a href="{% url 'help_index' %}" class="text-blue-600 text-sm font-semibold flex items-center">
+                    <i class="fa-solid fa-arrow-left mr-2"></i> Back to Help Index
+                </a>
+            </nav>
+
+            <header class="mb-10 pb-8 border-b border-gray-100">
+                <div class="flex items-center text-sm text-blue-600 font-medium mb-3">
+                    <span class="bg-blue-50 px-2 py-0.5 rounded">{{ topic.category.name }}</span>
+                    <span class="mx-2 text-gray-300">/</span>
+                    <span class="text-gray-500">Last updated: {{ topic.updated_at|date:"M d, Y" }}</span>
+                </div>
+                <h1 class="text-4xl font-extrabold text-gray-900 tracking-tight">{{ topic.title }}</h1>
+            </header>
+
+            <div id="help-content" class="prose max-w-none">
+                {{ topic.content|safe }}
+            </div>
+
+            {% if topic.images.all %}
+            <div class="mt-12 space-y-8">
+                <h3 class="text-xl font-bold text-gray-900 flex items-center">
+                    <i class="fa-solid fa-images mr-2 text-blue-500"></i> Visual Examples
+                </h3>
+                <div class="grid grid-cols-1 gap-6">
+                    {% for img in topic.images.all %}
+                    <figure class="bg-gray-50 rounded-xl overflow-hidden border border-gray-200 p-2">
+                        <img src="{{ img.image.url }}" alt="{{ img.caption }}" class="w-full">
+                        {% if img.caption %}
+                        <figcaption class="p-3 text-center text-sm text-gray-600 font-medium italic">
+                            {{ img.caption }}
+                        </figcaption>
+                        {% endif %}
+                    </figure>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <footer class="mt-16 pt-8 border-t border-gray-100 flex justify-between items-center text-sm text-gray-400">
+                <span>Was this page helpful?</span>
+                <div class="flex space-x-4">
+                    <button class="hover:text-blue-600 transition-colors"><i class="fa-regular fa-thumbs-up mr-1"></i>
+                        Yes</button>
+                    <button class="hover:text-red-500 transition-colors"><i class="fa-regular fa-thumbs-down mr-1"></i>
+                        No</button>
+                </div>
+            </footer>
+        </div>
+    </article>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const contentDiv = document.getElementById('help-content');
+        if (contentDiv && typeof marked !== 'undefined') {
+            let rawMarkdown = contentDiv.textContent.trim();
+
+            if (!rawMarkdown.startsWith('<')) {
+                // Initial parse
+                let html = marked.parse(rawMarkdown);
+
+                // Create a temporary element to manipulate the DOM
+                const temp = document.createElement('div');
+                temp.innerHTML = html;
+
+                // Support [!TIP], [!IMPORTANT], [!NOTE], [!WARNING], [!CAUTION]
+                // Look for blockquotes that start with the alert prefix
+                const blockquotes = temp.querySelectorAll('blockquote');
+                blockquotes.forEach(bq => {
+                    const firstP = bq.querySelector('p');
+                    if (firstP) {
+                        const match = firstP.innerHTML.match(/^\[!(TIP|IMPORTANT|NOTE|WARNING|CAUTION)\]/i);
+                        if (match) {
+                            const type = match[1].toUpperCase();
+                            const colors = {
+                                'TIP': 'text-green-600 bg-green-50 border-green-200',
+                                'IMPORTANT': 'text-blue-600 bg-blue-50 border-blue-200',
+                                'NOTE': 'text-gray-600 bg-gray-50 border-gray-200',
+                                'WARNING': 'text-amber-600 bg-amber-50 border-amber-200',
+                                'CAUTION': 'text-red-600 bg-red-50 border-red-200'
+                            };
+
+                            // Create the styled container
+                            const alertDiv = document.createElement('div');
+                            alertDiv.className = `p-4 my-4 border-l-4 rounded ${colors[type] || 'text-gray-600'}`;
+                            alertDiv.setAttribute('data-alert', type);
+
+                            // Remove the [!TYPE] prefix from the content
+                            firstP.innerHTML = firstP.innerHTML.replace(/^\[!(TIP|IMPORTANT|NOTE|WARNING|CAUTION)\]\s*/i, '');
+
+                            // Add a label
+                            const label = document.createElement('strong');
+                            label.className = 'block mb-1';
+                            label.textContent = type + ':';
+                            alertDiv.appendChild(label);
+
+                            // Move all children of the blockquote to the div
+                            while (bq.firstChild) {
+                                alertDiv.appendChild(bq.firstChild);
+                            }
+
+                            // Replace the blockquote with the div
+                            bq.parentNode.replaceChild(alertDiv, bq);
+                        }
+                    }
+                });
+
+                const finalHtml = temp.innerHTML;
+                contentDiv.innerHTML = typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(finalHtml) : finalHtml;
+            }
+        }
+    });
+</script>
+{% endblock %}

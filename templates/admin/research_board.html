@@ -1,0 +1,252 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static %}
+
+{% block extrastyle %}{{ block.super }}
+<style>
+    .board-container {
+        display: flex;
+        gap: 20px;
+        padding: 20px;
+        overflow-x: auto;
+        min-height: calc(100vh - 200px);
+        background: #f8fafc;
+    }
+    .column {
+        flex: 1;
+        min-width: 350px;
+        background: #f1f5f9;
+        border-radius: 12px;
+        display: flex;
+        flex-direction: column;
+        padding: 12px;
+    }
+    .column-header {
+        font-weight: 700;
+        font-size: 16px;
+        margin-bottom: 15px;
+        padding: 5px 10px;
+        text-transform: uppercase;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        color: #475569;
+    }
+    .count {
+        background: #cbd5e1;
+        color: #475569;
+        font-size: 12px;
+        padding: 2px 8px;
+        border-radius: 20px;
+    }
+    .q-card {
+        background: white;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 12px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        border-left: 5px solid transparent;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .q-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    /* Priority Borders */
+    .prio-high { border-left-color: #ef4444; }
+    .prio-medium { border-left-color: #f59e0b; }
+    .prio-low { border-left-color: #94a3b8; }
+
+    .meta {
+        font-size: 11px;
+        color: #64748b;
+        margin-bottom: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .prio-tag {
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 9px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        color: white;
+    }
+    .tag-high { background: #ef4444; }
+    .tag-medium { background: #f59e0b; }
+    .tag-low { background: #94a3b8; }
+
+    .type-label {
+        color: #94a3b8;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 9px;
+        margin-right: 5px;
+    }
+
+    .parent-link {
+        font-weight: bold;
+        color: #1e293b;
+        text-decoration: none;
+        font-size: 13px;
+        display: block;
+        margin-bottom: 5px;
+    }
+    .parent-link:hover { text-decoration: underline; color: #3b82f6; }
+
+    .question-text {
+        font-size: 14px;
+        color: #334155;
+        margin: 10px 0;
+        line-height: 1.5;
+        white-space: pre-wrap;
+    }
+
+    .card-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 15px;
+        border-top: 1px solid #f1f5f9;
+        padding-top: 10px;
+    }
+    .action-btn {
+        font-size: 11px;
+        padding: 4px 12px;
+        border-radius: 6px;
+        border: 1px solid #e2e8f0;
+        cursor: pointer;
+        background: white;
+        color: #475569;
+        font-weight: 600;
+        transition: all 0.2s;
+        text-decoration: none;
+    }
+    .action-btn:hover { background: #f8fafc; border-color: #cbd5e1; }
+    .btn-resolve { background: #10b981; color: white; border: none; }
+    .btn-resolve:hover { background: #059669; color: white; }
+
+    .empty-state {
+        text-align: center;
+        padding: 40px 20px;
+        color: #94a3b8;
+        font-style: italic;
+        font-size: 13px;
+    }
+</style>
+{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+<a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+&rsaquo; {{ title }}
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    <div class="board-container">
+        
+        <!-- OPEN COLUMN -->
+        <div class="column">
+            <div class="column-header">
+                Open Questions
+                <span class="count">{{ categories.open|length }}</span>
+            </div>
+            {% for q in categories.open %}
+                <div class="q-card prio-{{ q.priority }}">
+                    <div class="meta">
+                        <span>{{ q.created_at|date:"M d, Y" }}</span>
+                        <span class="prio-tag tag-{{ q.priority }}">{{ q.get_priority_display }}</span>
+                    </div>
+                    <div>
+                        <span class="type-label">{{ q.content_type.name }}:</span>
+                        <a href="{{ q.parent_admin_url }}" class="parent-link">
+                            {{ q.content_object|default:"Deleted Item" }}
+                        </a>
+                    </div>
+                    <div class="question-text">{{ q.question }}</div>
+                    <div class="card-actions">
+                        <form method="post" style="display:inline;">
+                            {% csrf_token %}
+                            <input type="hidden" name="question_id" value="{{ q.id }}">
+                            <input type="hidden" name="action" value="resolve">
+                            <button type="submit" class="action-btn btn-resolve">Resolve</button>
+                        </form>
+                        <form method="post" style="display:inline;">
+                            {% csrf_token %}
+                            <input type="hidden" name="question_id" value="{{ q.id }}">
+                            <input type="hidden" name="action" value="defer">
+                            <button type="submit" class="action-btn">Defer</button>
+                        </form>
+                        <a href="{% url opts|admin_urlname:'change' q.id %}" class="action-btn">Edit</a>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="empty-state">No open questions! Time to drink coffee.</div>
+            {% endfor %}
+        </div>
+
+        <!-- DEFERRED COLUMN -->
+        <div class="column">
+            <div class="column-header">
+                Deferred
+                <span class="count">{{ categories.deferred|length }}</span>
+            </div>
+            {% for q in categories.deferred %}
+                <div class="q-card prio-{{ q.priority }}" style="opacity: 0.8; background: #fcfcfc;">
+                    <div class="meta">
+                        <span>{{ q.created_at|date:"M d, Y" }}</span>
+                        <span class="prio-tag tag-{{ q.priority }}">{{ q.get_priority_display }}</span>
+                    </div>
+                    <a href="{{ q.parent_admin_url }}" class="parent-link">
+                        {{ q.content_object|default:"Deleted Item" }}
+                    </a>
+                    <div class="question-text">{{ q.question }}</div>
+                    <div class="card-actions">
+                        <form method="post" style="display:inline;">
+                            {% csrf_token %}
+                            <input type="hidden" name="question_id" value="{{ q.id }}">
+                            <input type="hidden" name="action" value="reopen">
+                            <button type="submit" class="action-btn">Re-open</button>
+                        </form>
+                        <a href="{% url opts|admin_urlname:'change' q.id %}" class="action-btn">Edit</a>
+                    </div>
+                </div>
+            {% empty %}
+                 <div class="empty-state">Nothing deferred.</div>
+            {% endfor %}
+        </div>
+
+        <!-- ANSWERED COLUMN -->
+        <div class="column">
+            <div class="column-header">
+                Answered
+                <span class="count">{{ categories.answered|length }}</span>
+            </div>
+            {% for q in categories.answered %}
+                <div class="q-card" style="background: #f8fafc; border-left-color: #cbd5e1;">
+                    <div class="meta">
+                        <span>Resolved {{ q.updated_at|date:"M d, Y" }}</span>
+                    </div>
+                    <a href="{{ q.parent_admin_url }}" class="parent-link" style="color: #64748b; font-weight: normal;">
+                         {{ q.content_object|default:"Deleted Item" }}
+                    </a>
+                    <div class="question-text" style="color: #94a3b8; text-decoration: line-through;">{{ q.question }}</div>
+                    <div class="card-actions">
+                        <form method="post" style="display:inline;">
+                            {% csrf_token %}
+                            <input type="hidden" name="question_id" value="{{ q.id }}">
+                            <input type="hidden" name="action" value="reopen">
+                            <button type="submit" class="action-btn">Re-open</button>
+                        </form>
+                    </div>
+                </div>
+            {% empty %}
+                 <div class="empty-state">No solved mysteries yet.</div>
+            {% endfor %}
+        </div>
+
+    </div>
+</div>
+{% endblock %}

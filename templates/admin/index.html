@@ -1,0 +1,35 @@
+{% extends "admin/index.html" %}
+
+{% block sidebar %}
+<div id="content-related">
+    <div class="module" id="help-module">
+        <h2>Help & Guides</h2>
+        <ul class="actionlist">
+            <li class="addlink">
+                <a href="{% url 'import_data' %}" style="font-weight: bold; color: #447e9b;">
+                    📥 Import Data (JSON/CSV)
+                </a>
+            </li>
+            <li class="addlink">
+                <a href="{% url 'import_gedcom' %}" style="font-weight: bold; color: #7C3AED;">
+                    🧬 Import GEDCOM (.ged)
+                </a>
+            </li>
+            <li class="addlink">
+                <a href="{% url 'research_board' %}" style="font-weight: bold; color: #10B981;">
+                    🎯 Research Dashboard
+                </a>
+            </li>
+            <li class="addlink">
+                <a href="{% url 'cloning_guide' %}" style="font-weight: bold; color: #447e9b;">
+                    📖 Cloning & Collaboration Guide
+                </a>
+            </li>
+        </ul>
+        <p style="padding: 0 10px 10px 10px; font-size: 11px; color: #666;">
+            Learn how to clone timelines, events, and people into your private collection.
+        </p>
+    </div>
+    {{ block.super }}
+</div>
+{% endblock %}

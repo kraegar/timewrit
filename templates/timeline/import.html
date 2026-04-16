@@ -1,0 +1,254 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block extrastyle %}{{ block.super }}
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
+    &rsaquo; Import Data
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    <div class="max-w-2xl mx-auto bg-white p-8 rounded-lg shadow-sm border border-gray-200 mt-10">
+        <h2 class="text-2xl font-bold text-gray-900 mb-6">Import Data</h2>
+
+        <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <i class="fa-solid fa-circle-info text-blue-400"></i>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm text-blue-700">
+                        Select your data type and upload a formatted CSV or JSON file. Click "Get AI Prompt" below for
+                        detailed
+                        instructions on generating compatible CSV data!
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        {% if messages %}
+        <div class="mb-6">
+            {% for message in messages %}
+            <div
+                class="p-4 rounded-md {% if message.tags == 'error' %}bg-red-50 text-red-700{% elif message.tags == 'warning' %}bg-yellow-50 text-yellow-700{% else %}bg-green-50 text-green-700{% endif %} mb-2">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <form method="post" enctype="multipart/form-data" class="space-y-6">
+            {% csrf_token %}
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Import Type</label>
+                <select name="import_type" id="import_type_select" onchange="updatePromptTemplate()"
+                    class="mt-1 block w-full pl-3 pr-10 p-2.5 h-auto text-sm border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md border bg-white">
+                    <option value="events">Timeline Events (CSV)</option>
+                    <option value="people">People (CSV)</option>
+                    <option value="locations">Locations (CSV)</option>
+                    <option value="json_export">Historical Timeline (JSON Export)</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Data File</label>
+                <div
+                    class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md hover:border-blue-400 transition-colors">
+                    <div class="space-y-1 text-center">
+                        <i class="fa-solid fa-file-csv text-4xl text-gray-400 mb-3"></i>
+                        <div class="flex text-sm text-gray-600">
+                            <label for="file-upload"
+                                class="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
+                                <span>Upload a file</span>
+                                <input id="file-upload" name="csv_file" type="file" class="sr-only" required
+                                    accept=".csv,.json">
+                            </label>
+                            <p class="pl-1">or drag and drop</p>
+                        </div>
+                        <p class="text-xs text-gray-500">
+                            CSV or JSON up to 10MB
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center mt-6">
+                <button type="button" onclick="openPromptModal()"
+                    class="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center">
+                    <i class="fa-solid fa-robot mr-1"></i> Get AI Prompt
+                </button>
+
+                <div class="flex gap-3">
+                    <a href="{% url 'admin:index' %}"
+                        class="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        Cancel
+                    </a>
+                    <button type="submit"
+                        class="bg-blue-600 border border-transparent rounded-md shadow-sm py-2 px-4 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        Import Data
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- AI Prompt Modal -->
+    <div id="prompt-modal"
+        class="fixed inset-0 z-50 flex items-center justify-center hidden bg-black bg-opacity-50 backdrop-blur-sm">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 overflow-hidden transform transition-all">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <h3 class="text-lg font-semibold text-gray-900">AI Data Extraction Prompt</h3>
+                <button onclick="closePromptModal()" class="text-gray-400 hover:text-gray-500 focus:outline-none">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            <div class="px-6 py-4">
+                <p class="text-sm text-gray-600 mb-3">Copy this prompt and give it to an AI (like ChatGPT or Claude)
+                    along
+                    with your document to generate a compatible CSV.</p>
+                <div class="relative">
+                    <textarea id="ai-prompt-text"
+                        class="w-full h-64 p-3 border border-gray-300 rounded-md font-mono text-xs bg-gray-50 focus:ring-blue-500 focus:border-blue-500"
+                        readonly></textarea>
+                    <button onclick="copyPrompt()"
+                        class="absolute top-2 right-2 bg-white text-gray-600 hover:text-blue-600 border border-gray-200 rounded px-2 py-1 text-xs font-medium shadow-sm transition-colors">
+                        <i class="fa-regular fa-copy mr-1"></i> Copy
+                    </button>
+                </div>
+            </div>
+            <div class="px-6 py-3 bg-gray-50 text-right">
+                <button onclick="closePromptModal()"
+                    class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-50">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const prompts = {
+            events: `You are a Data Extraction Assistant. Read the provided text and extract historical events into a strict CSV.
+
+### Format
+Header: title,description,start_date,end_date,location,people,timelines,link,sources
+
+### Columns
+1. title: Short descriptive title.
+2. description: Detailed description. Escape internal quotes with double quotes.
+3. start_date: ISO 8601 (YYYY-MM-DD). Use YYYY-01-01 if month/day unknown.
+4. end_date: Optional. ISO 8601 or empty.
+5. location: Location name (e.g. "Tombstone, AZ").
+6. people: Comma-separated list of people involved.
+7. timelines: Comma-separated list of overarching timelines.
+8. link: URL to Wikipedia or other resource.
+9. sources: Comma-separated list of bibliographic citations (e.g. "The Last Gunfight p. 12, True West Magazine").
+
+### Rules
+- Any field containing a comma MUST be enclosed in double quotes (e.g. "Tombstone, AZ" or "Wyatt Earp, Doc Holliday").
+
+### Example
+title,description,start_date,end_date,location,people,timelines,link,sources
+Gunfight at OK Corral,"Famous shoutout.",1881-10-26,,"Tombstone, AZ","Wyatt Earp, Doc Holliday",Wild West,url.com,"Earp Biography p. 45"`,
+
+            people: `You are a Data Extraction Assistant. Read the provided text and extract historical people into a strict CSV.
+
+### Format
+Header: name,description,birth_date,death_date,timelines,link,sources
+
+### Columns
+1. name: Full name of the person.
+2. description: Biographical summary. Escape internal quotes with double quotes.
+3. birth_date: Optional. ISO 8601 (YYYY-MM-DD). Use YYYY-01-01 if month/day unknown.
+4. death_date: Optional. ISO 8601 or empty.
+5. timelines: Comma-separated list of overarching timelines.
+6. link: URL to Wikipedia or other resource.
+7. sources: Comma-separated list of bibliographic citations (e.g. "Earp Biography p. 12, Tombstone Epitaph").
+
+### Rules
+- Any field containing a comma MUST be enclosed in double quotes.
+
+### Example
+name,description,birth_date,death_date,timelines,link,sources
+Wyatt Earp,"Lawman and gambler.",1848-03-19,1929-01-13,"Wild West",url.com,"Tombstone Epitaph"`,
+
+            locations: `You are a Data Extraction Assistant. Read the provided text and extract historical locations into a strict CSV.
+
+### Format
+Header: name,description,coordinates,link,sources
+
+### Columns
+1. name: Name of the location.
+2. description: Details about the location. Escape internal quotes with double quotes.
+3. coordinates: Optional. Latitude and longitude (e.g. "31.712, -110.067").
+4. link: URL to Wikipedia or other resource.
+5. sources: Comma-separated list of bibliographic citations.
+
+### Rules
+- Any field containing a comma MUST be enclosed in double quotes (e.g. "31.712, -110.067" or "Tombstone, AZ").
+
+### Example
+name,description,coordinates,link,sources
+"Tombstone, AZ","Boomtown in Arizona.","31.712, -110.067",url.com,"True West Magazine"`,
+
+            json_export: `You are a Data Extraction Assistant. Read the provided text and extract historical events into a strict JSON array format compatible with the Timeline application.
+
+### Format
+A single JSON array containing objects with the following keys:
+1. "title": (String) Required descriptive title.
+2. "description": (String) Detailed markdown description.
+3. "start_date": (String) ISO 8601 (YYYY-MM-DD). Use YYYY-01-01 if month/day unknown.
+4. "end_date": (String, Optional) ISO 8601 or null.
+5. "location": (String, Optional) Location name (e.g. "Tombstone, AZ").
+6. "people": (Array of Objects, Optional) List of people involved, e.g. [{"name": "Wyatt Earp"}].
+7. "tags": (Array of Objects, Optional) Thematic tags, e.g. [{"name": "Wild West", "color": "bg-red-500"}].
+
+### Rules
+- Ensure the output is valid, parsable JSON without trailing commas or syntax errors.
+- Do not include explanatory text outside of the JSON block.
+
+### Example
+[
+  {
+    "title": "Gunfight at OK Corral",
+    "description": "Famous shootout.",
+    "start_date": "1881-10-26",
+    "end_date": null,
+    "location": "Tombstone, AZ",
+    "people": [{"name": "Wyatt Earp"}, {"name": "Doc Holliday"}],
+    "tags": [{"name": "Wild West", "color": "bg-red-500"}]
+  }
+]`
+        };
+
+        function updatePromptTemplate() {
+            const type = document.getElementById('import_type_select').value;
+            document.getElementById('ai-prompt-text').value = prompts[type];
+        }
+
+        // Initialize prompt on load
+        document.addEventListener('DOMContentLoaded', updatePromptTemplate);
+
+        function openPromptModal() {
+            document.getElementById('prompt-modal').classList.remove('hidden');
+        }
+
+        function closePromptModal() {
+            document.getElementById('prompt-modal').classList.add('hidden');
+        }
+
+        function copyPrompt() {
+            const copyText = document.getElementById("ai-prompt-text");
+            copyText.select();
+            copyText.setSelectionRange(0, 99999);
+            navigator.clipboard.writeText(copyText.value).then(() => {
+                alert("Prompt copied to clipboard!");
+            });
+        }
+    </script>
+    {% endblock %}

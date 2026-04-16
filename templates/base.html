@@ -1,0 +1,204 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TimeWrit</title>
+    <!-- Theme Init (Prevent FOUC) -->
+    <script>
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark')
+        } else {
+            document.documentElement.classList.remove('dark')
+        }
+    </script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+    <!-- Tailwind Config -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+    <!-- DOMPurify -->
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
+    <!-- Marked.js -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Vis.js Timeline -->
+    <script type="text/javascript"
+        src="https://unpkg.com/vis-timeline@latest/standalone/umd/vis-timeline-graph2d.min.js"></script>
+    <link href="https://unpkg.com/vis-timeline@latest/styles/vis-timeline-graph2d.min.css" rel="stylesheet"
+        type="text/css" />
+
+    <!-- Leaflet Maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+
+    <style>
+        /* Custom scrollbar for webkit */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        .dark ::-webkit-scrollbar-track {
+            background: #111827;
+        }
+
+        .dark ::-webkit-scrollbar-thumb {
+            background: #4b5563;
+        }
+
+        .dark ::-webkit-scrollbar-thumb:hover {
+            background: #6b7280;
+        }
+
+        .vis-item {
+            border-color: #3B82F6;
+            background-color: #DBEafe;
+            color: #1e3a8a;
+            font-family: 'Inter', sans-serif;
+            border-radius: 4px;
+        }
+
+        .vis-item.vis-selected {
+            border-color: #2563EB;
+            background-color: #BFDBFE;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Dark Mode overrides for Vis.js Timeline */
+        .dark .vis-timeline { border-color: #374151; background-color: transparent !important; }
+        .dark .vis-panel { border-color: #374151; background-color: transparent !important; }
+        .dark .vis-panel.vis-bottom, .dark .vis-panel.vis-center, .dark .vis-panel.vis-left, .dark .vis-panel.vis-right, .dark .vis-panel.vis-top { border-color: #374151; background-color: #111827 !important; } /* Hardcode dark mode bg to bg-gray-900 to overwrite the internal white panels */
+        .dark .vis-panel.vis-left .vis-content, .dark .vis-panel.vis-left .vis-labelset, .dark .vis-panel.vis-left .vis-label, .dark .vis-panel.vis-left .vis-inner { background-color: transparent !important; }
+        .dark .vis-labelset .vis-label { border-color: #374151; color: #9ca3af; }
+        .dark .vis-shadow { box-shadow: none !important; background-color: transparent !important; border: none !important; }
+        .dark .vis-content { background-color: transparent !important; }
+        .dark .vis-time-axis .vis-text { color: #9ca3af; }
+        .dark .vis-time-axis .vis-grid.vis-minor { border-color: #374151; }
+        .dark .vis-time-axis .vis-grid.vis-major { border-color: #4b5563; }
+        .dark .vis-item {
+            border-color: #3b82f6;
+            background-color: #1e3a8a;
+            color: #dbeafe;
+        }
+        .dark .vis-item.vis-selected {
+            border-color: #60a5fa;
+            background-color: #2563eb;
+            color: #ffffff;
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 font-sans h-screen flex flex-col transition-colors duration-200">
+
+    <nav class="bg-white dark:bg-gray-800 shadow-md z-10 transition-colors duration-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex">
+                    <a href="/" class="flex-shrink-0 flex items-center hover:opacity-80 transition-opacity">
+                        <i class="fa-solid fa-timeline text-blue-600 dark:text-blue-400 text-2xl mr-2"></i>
+                        <div class="flex flex-col">
+                            <span class="font-bold text-xl text-gray-900 dark:text-white leading-tight">TimeWrit</span>
+                            <span class="text-[10px] text-gray-500 dark:text-gray-400 font-medium tracking-wide uppercase">Think 4th dimensionally</span>
+                        </div>
+                    </a>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button id="theme-toggle" type="button" class="text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5 mr-2">
+                        <i id="theme-toggle-dark-icon" class="fa-solid fa-moon hidden"></i>
+                        <i id="theme-toggle-light-icon" class="fa-solid fa-sun hidden"></i>
+                    </button>
+                    <a href="{% url 'sources_library' %}"
+                        class="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                        <i class="fa-solid fa-book-open mr-1"></i> Bibliography
+                    </a>
+                    <a href="/admin/"
+                        class="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                        <i class="fa-solid fa-database mr-1"></i> Manage
+                    </a>
+                    <a href="{% url 'help_index' %}"
+                        class="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                        <i class="fa-solid fa-circle-question mr-1"></i> Help
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main
+        class="flex-grow flex flex-col overflow-y-auto overflow-x-auto min-w-[1000px] {% block main_class %}container mx-auto px-4 py-6{% endblock %}">
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <footer class="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 mt-auto transition-colors duration-200">
+        <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
+            <p class="text-center text-gray-500 dark:text-gray-400 text-sm">
+                &copy; {% now "Y" %} TimeWrit.
+            </p>
+        </div>
+    </footer>
+
+    {% block scripts %}
+    {% endblock %}
+    <script>
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const darkIcon = document.getElementById('theme-toggle-dark-icon');
+        const lightIcon = document.getElementById('theme-toggle-light-icon');
+
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            lightIcon.classList.remove('hidden');
+        } else {
+            darkIcon.classList.remove('hidden');
+        }
+
+        themeToggleBtn.addEventListener('click', function() {
+            darkIcon.classList.toggle('hidden');
+            lightIcon.classList.toggle('hidden');
+
+            if (localStorage.theme === 'light') {
+                document.documentElement.classList.add('dark');
+                localStorage.theme = 'dark';
+            } else if (localStorage.theme === 'dark') {
+                document.documentElement.classList.remove('dark');
+                localStorage.theme = 'light';
+            } else {
+                if (document.documentElement.classList.contains('dark')) {
+                    document.documentElement.classList.remove('dark');
+                    localStorage.theme = 'light';
+                } else {
+                    document.documentElement.classList.add('dark');
+                    localStorage.theme = 'dark';
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>

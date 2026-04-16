@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto w-full">
+    <div class="mb-8 flex justify-between items-end border-b pb-4 border-gray-200">
+        <div>
+            <h1 class="text-3xl font-black text-gray-900 tracking-tight">Citation Library</h1>
+            <p class="text-gray-500 mt-2">Browse the bibliography sources and see which entities cite them.</p>
+        </div>
+        <a href="/" class="text-blue-600 hover:text-blue-800 text-sm font-medium"><i
+                class="fa-solid fa-arrow-left mr-1"></i> Back to TimeWrit</a>
+    </div>
+
+    <div class="space-y-4">
+        {% for stat in sources %}
+        <div class="bg-white border rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+            <details class="group">
+                <summary
+                    class="flex justify-between items-center font-medium cursor-pointer list-none p-6 text-gray-900 hover:bg-gray-50">
+                    <div class="flex-1 pr-4">
+                        <h2 class="text-lg md:text-xl font-bold flex items-center">
+                            <i class="fa-solid fa-book text-gray-400 mr-3"></i>
+                            {{ stat.obj.title }}
+                        </h2>
+                        <div class="mt-2 text-xs md:text-sm text-gray-500 flex flex-wrap gap-4 items-center">
+                            {% if stat.obj.author %}
+                            <span><i class="fa-solid fa-user-pen mr-1"></i> {{ stat.obj.author }}</span>
+                            {% endif %}
+                            {% if stat.obj.publication_date %}
+                            <span><i class="fa-solid fa-calendar mr-1"></i> {{ stat.obj.publication_date }}</span>
+                            {% endif %}
+                            {% if stat.obj.url %}
+                            <a href="{{ stat.obj.url }}" target="_blank" class="text-blue-500 hover:text-blue-700"
+                                onclick="event.stopPropagation()">
+                                <i class="fa-solid fa-external-link-alt"></i> External Link
+                            </a>
+                            {% endif %}
+                            {% if stat.obj.parent %}
+                            <span><i class="fa-solid fa-layer-group mr-1"></i> In: {{ stat.obj.parent.title }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-6 text-sm">
+                        <!-- prettier-ignore -->
+                        <div class="text-center">
+                            <span class="block font-bold text-gray-700 text-lg md:text-xl leading-none">
+                                {{ stat.total_usages }}
+                            </span>
+                            <span class="text-gray-400 text-[10px] md:text-xs uppercase tracking-wider">Total</span>
+                        </div>
+                        <span class="transition group-open:rotate-180">
+                            <i class="fa-solid fa-chevron-down text-gray-400"></i>
+                        </span>
+                    </div>
+                </summary>
+
+                <div class="text-neutral-600 group-open:animate-fadeIn">
+                    <div class="bg-gray-50 p-4 md:p-6 border-t border-gray-100">
+                        <!-- prettier-ignore -->
+                        <h3 class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">
+                            Cited By ({{ stat.total_usages }})
+                        </h3>
+                        {% if stat.usages %}
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+                            {% for usage in stat.usages %}
+                            <a href="{{ usage.link }}"
+                                class="flex items-center p-3 bg-white border border-gray-200 rounded-lg shadow-sm hover:border-blue-300 hover:shadow transition-all group/item">
+                                <div class="flex-shrink-0 w-8 text-center">
+                                    {% if usage.type == 'Event' %}
+                                    <i
+                                        class="fa-solid fa-calendar-day text-blue-500 group-hover/item:text-blue-600"></i>
+                                    {% elif usage.type == 'Person' %}
+                                    <i class="fa-solid fa-user text-amber-500 group-hover/item:text-amber-600"></i>
+                                    {% else %}
+                                    <i
+                                        class="fa-solid fa-location-dot text-emerald-500 group-hover/item:text-emerald-600"></i>
+                                    {% endif %}
+                                </div>
+                                <!-- prettier-ignore -->
+                                <div class="ml-2 md:ml-3 truncate">
+                                    <span
+                                        class="text-[10px] md:text-xs font-semibold text-gray-400 uppercase tracking-wider block mb-0.5">
+                                        {{ usage.type }}
+                                    </span>
+                                    <span class="text-xs md:text-sm font-medium text-gray-800 truncate block">
+                                        {{ usage.title }}
+                                    </span>
+                                </div>
+                            </a>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <p class="text-sm text-gray-500 italic">This source is not currently cited by any records.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </details>
+        </div>
+        {% empty %}
+        <div class="text-center py-16 bg-white border rounded-xl shadow-sm">
+            <i class="fa-solid fa-book-open text-5xl text-gray-200 mb-4"></i>
+            <h3 class="text-lg font-medium text-gray-900">No Sources Found</h3>
+            <p class="text-gray-500 mt-1 max-w-sm mx-auto">Start building your library by adding bibliography sources in
+                the admin panel.</p>
+            <a href="/admin/timeline/source/add/"
+                class="mt-6 inline-block bg-blue-600 text-white px-5 py-2.5 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">Add
+                First Source</a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<style>
+    /* Remove default details marker */
+    details>summary::-webkit-details-marker {
+        display: none;
+    }
+</style>
+{% endblock %}

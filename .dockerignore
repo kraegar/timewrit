@@ -1,0 +1,29 @@
+# Dependencies
+.venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+
+# Local Databases & Media
+db.sqlite3
+media/
+data/
+scratch/
+brain/
+
+# Environment & Secrets
+.env
+.env.example
+
+# Git & Tooling
+.git
+.github
+.vscode
+.gemini
+.idea
+
+# Build Artifacts
+*.log
+*.pot
+*.pyc
