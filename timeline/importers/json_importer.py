@@ -17,6 +17,8 @@ class JsonEventImporter:
     """
     def __init__(self, user=None):
         self.user = user
+        from collections import defaultdict
+        self.stats = defaultdict(int)
 
     def parse(self, file_obj) -> Dict[str, Any]:
         if isinstance(file_obj, bytes):
@@ -69,14 +71,16 @@ class JsonEventImporter:
             # 6. Generic Relations (Disputed Facts, Research Questions, etc.)
             self._import_generic_relations(entities)
             
+            
         except Exception as e:
             errors.append(f"Critical error during deep import: {str(e)}")
 
-        return created_count, errors
+        summary = ", ".join([f"{count} {key.capitalize()}" for key, count in self.stats.items()])
+        return self.stats.get('events', 0), errors if errors else [f"Imported: {summary}"]
 
     def _import_tags(self, tags: List[Dict]):
         for t in tags:
-            tag, _ = Tag.objects.get_or_create(
+            tag, created = Tag.objects.update_or_create(
                 name=t['name'],
                 defaults={
                     'color': t.get('color', '#3B82F6'),
@@ -84,17 +88,18 @@ class JsonEventImporter:
                     'needs_research': t.get('needs_research', False)
                 }
             )
+            self.stats['tags'] += 1
 
     def _import_sources(self, sources: List[Dict]):
-        # Multi-pass for parent resolution
         created = {}
         for s_data in sources:
-            source, _ = Source.objects.get_or_create(
+            source, _ = Source.objects.update_or_create(
                 title=s_data['title'],
-                author=s_data.get('author'),
+                # Secondary selector: author or date if available to help disambiguate
                 defaults={
-                    'url': s_data.get('url'),
+                    'author': s_data.get('author', ''),
                     'publication_date': s_data.get('publication_date'),
+                    'url': s_data.get('url'),
                     'researcher_notes': s_data.get('researcher_notes', ''),
                     'needs_research': s_data.get('needs_research', False),
                     'is_private': s_data.get('is_private', False),
@@ -102,6 +107,7 @@ class JsonEventImporter:
                 }
             )
             created[s_data['title']] = source
+            self.stats['sources'] += 1
         
         # Resolve parents
         for s_data in sources:
@@ -126,7 +132,7 @@ class JsonEventImporter:
                 if parent_data:
                     parent = _get_or_create_loc(parent_data)
             
-            loc, _ = Location.objects.get_or_create(
+            loc, _ = Location.objects.update_or_create(
                 name=name,
                 parent=parent,
                 defaults={
@@ -147,6 +153,7 @@ class JsonEventImporter:
                     'owner': self.user
                 }
             )
+            self.stats['locations'] += 1
             
             # Import Aliases
             for alias_data in loc_data.get('aliases', []):
@@ -170,14 +177,15 @@ class JsonEventImporter:
         def _get_or_create_tl(tl_data):
             name = tl_data['name']
             if name in created: return created[name]
-            parent = None
+            parent_obj = None
             if tl_data.get('parent_name'):
                 p_data = next((t for t in timelines if t['name'] == tl_data['parent_name']), None)
-                if p_data: parent = _get_or_create_tl(p_data)
+                if p_data: parent_obj = _get_or_create_tl(p_data)
             
-            tl, _ = Timeline.objects.get_or_create(
-                name=name, parent=parent,
+            tl, _ = Timeline.objects.update_or_create(
+                name=name,
                 defaults={
+                    'parent': parent_obj,
                     'description': tl_data.get('description', ''),
                     'is_default': tl_data.get('is_default', False),
                     'researcher_notes': tl_data.get('researcher_notes', ''),
@@ -187,18 +195,19 @@ class JsonEventImporter:
                 }
             )
             created[name] = tl
+            self.stats['timelines'] += 1
             return tl
         for t in timelines: _get_or_create_tl(t)
 
     def _import_people(self, people: List[Dict]):
         for p in people:
-            person, _ = Person.objects.get_or_create(
+            person, _ = Person.objects.update_or_create(
                 name=p['name'],
+                disambiguation=p.get('disambiguation'),
                 defaults={
                     'gender': p.get('gender', 'unknown'),
                     'gender_custom': p.get('gender_custom'),
                     'status': p.get('status', 'unverified'),
-                    'disambiguation': p.get('disambiguation'),
                     'description': p.get('description', ''),
                     'image': p.get('image_path') or p.get('image'),
                     'link': p.get('link'),
@@ -215,10 +224,11 @@ class JsonEventImporter:
                     'owner': self.user
                 }
             )
+            self.stats['people'] += 1
 
     def _import_stories(self, stories: List[Dict]):
         for s in stories:
-            Story.objects.get_or_create(
+            Story.objects.update_or_create(
                 title=s['title'],
                 defaults={
                     'description': s.get('description', ''),
@@ -229,22 +239,26 @@ class JsonEventImporter:
                     'owner': self.user
                 }
             )
+            self.stats['stories'] += 1
 
     def _import_relationships(self, rels: List[Dict]):
         for r in rels:
             from_p = Person.objects.filter(name=r['from_person_name']).first()
             to_p = Person.objects.filter(name=r['to_person_name']).first()
             if from_p and to_p:
-                PersonRelationship.objects.get_or_create(
+                PersonRelationship.objects.update_or_create(
                     from_person=from_p,
                     to_person=to_p,
-                    relationship_type=r['relationship_type'],
+                    relationship_type=r['type'],
                     defaults={
                         'start_date': parse_date(r['start_date']) if r.get('start_date') else None,
                         'end_date': parse_date(r['end_date']) if r.get('end_date') else None,
-                        'notes': r.get('notes')
+                        'notes': r.get('notes', ''),
+                        'is_auto': r.get('is_auto', False),
+                        'owner': self.user
                     }
                 )
+                self.stats['relationships'] += 1
 
     def _import_events(self, events: List[Dict]) -> Tuple[int, List[str]]:
         count = 0
@@ -255,7 +269,7 @@ class JsonEventImporter:
                 location = Location.objects.filter(name=e.get('location_name')).first() if e.get('location_name') else None
                 end_loc = Location.objects.filter(name=e.get('end_location_name')).first() if e.get('end_location_name') else None
                 
-                event, created = TimelineEvent.objects.get_or_create(
+                event, created = TimelineEvent.objects.update_or_create(
                     title=e['title'],
                     start_date=parse_date(e['start_date']),
                     owner=self.user,
@@ -307,7 +321,7 @@ class JsonEventImporter:
         for a in attachments:
             path = a.get('relative_path') or a.get('url')
             if path:
-                attachment, _ = Attachment.objects.get_or_create(
+                attachment, _ = Attachment.objects.update_or_create(
                     file=path,
                     defaults={
                         'title': a.get('title', 'Imported'),
@@ -316,6 +330,7 @@ class JsonEventImporter:
                         'owner': self.user
                     }
                 )
+                self.stats['attachments'] += 1
                 if type_name == 'event': attachment.events.add(obj)
 
     def _import_generic_relations(self, entities: Dict):
@@ -343,34 +358,47 @@ class JsonEventImporter:
 
                 # Disputed Facts
                 for df in e_data.get('disputed_facts', []):
-                    # df is {'field_name': [...]} or list depending on serializer
-                    # Our serializer returns a dict of lists
                     if isinstance(df, dict):
                         for field, choices in df.items():
                             for choice in choices:
-                                DisputedFact.objects.get_or_create(
+                                DisputedFact.objects.update_or_create(
                                     content_type=ct, object_id=obj.id,
                                     field_name=field,
                                     alternative_value=choice['alternative_value'],
-                                    defaults={'notes': choice.get('notes', ''), 'is_resolved': choice.get('is_resolved', False)}
+                                    defaults={
+                                        'notes': choice.get('notes', ''), 
+                                        'is_resolved': choice.get('is_resolved', False),
+                                        'owner': self.user
+                                    }
                                 )
+                                self.stats['disputed_facts'] += 1
 
                 # Public Comments
                 for pc in e_data.get('public_comments', []):
-                    PublicComment.objects.get_or_create(
+                    PublicComment.objects.update_or_create(
                         content_type=ct, object_id=obj.id,
                         author_name=pc['author_name'],
                         body=pc['body'],
-                        defaults={'status': 'approved', 'created_at': parse_date(pc['created_at']) if pc.get('created_at') else None}
+                        defaults={
+                            'status': 'approved', 
+                            'created_at': parse_date(pc['created_at']) if pc.get('created_at') else None,
+                            'target_owner': self.user # Take over target ownership for notifications
+                        }
                     )
+                    self.stats['public_comments'] += 1
 
                 # Research Questions
                 for rq in e_data.get('research_questions', []):
-                    ResearchQuestion.objects.get_or_create(
+                    ResearchQuestion.objects.update_or_create(
                         content_type=ct, object_id=obj.id,
                         question=rq['question'],
-                        defaults={'answer': rq.get('answer'), 'status': rq.get('status', 'open')}
+                        defaults={
+                            'answer': rq.get('answer'), 
+                            'status': rq.get('status', 'open'),
+                            'owner': self.user
+                        }
                     )
+                    self.stats['research_questions'] += 1
 
     def _legacy_import(self, data):
         # [Implementation of old create_record logic redirected here if needed]

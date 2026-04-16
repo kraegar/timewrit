@@ -76,14 +76,24 @@ def import_data(request):
                 messages.error(request, 'Please upload a CSV file.')
                 return redirect('import_data')
 
-            count, errors = importer.import_data(uploaded_file)
+            count, reports = importer.import_data(uploaded_file)
+            
+            # Distinguish between actual errors and the success summary report
+            errors = [r for r in reports if "Imported:" not in r]
+            summaries = [r for r in reports if "Imported:" in r]
+
             if errors:
-                for err in errors[:5]: # Show at most 5 errors
-                    messages.warning(request, err)
+                for err in errors[:5]:
+                    messages.error(request, err)
                 if len(errors) > 5:
                     messages.warning(request, f'...and {len(errors) - 5} more errors.')
             
-            messages.success(request, f'Successfully imported {count} items.')
+            if summaries:
+                for summary in summaries:
+                    messages.success(request, summary)
+            else:
+                messages.success(request, f'Successfully imported {count} events.')
+                
             return redirect('admin:index')
             
         except Exception as e:
