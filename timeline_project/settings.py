@@ -102,10 +102,8 @@ SECRET_KEY = 'django-insecure-z9ko8q%m=x!=&q^93s#0x0*dktfwd@170*qtrwrj#ax9k5ze(+
 # FORCING DEBUG TRUE TEMPORARILY TO CAPTURE SILENT 500 ERROR
 DEBUG = True
 
-# ALLOWED_HOSTS can be a comma-separated string in .env
-# Include internal Cloud Run domains and localhost for health checks
-ALLOWED_HOSTS = [host.strip() for host in os.getenv('ALLOWED_HOSTS', '*').split(',') if host.strip()]
-ALLOWED_HOSTS += ['localhost', '127.0.0.1', '.a.run.app']
+# ALLOWED_HOSTS wildcard to bypass Load Balancer host mismatches temporarily
+ALLOWED_HOSTS = ['*']
 
 # Production Hardening
 if not DEBUG:
