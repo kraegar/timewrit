@@ -84,7 +84,8 @@ pull_secrets_from_manager()
 SECRET_KEY = 'django-insecure-z9ko8q%m=x!=&q^93s#0x0*dktfwd@170*qtrwrj#ax9k5ze(+'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
+# FORCING DEBUG TRUE TEMPORARILY TO CAPTURE SILENT 500 ERROR
+DEBUG = True
 
 # ALLOWED_HOSTS derived from Secret Manager / Environment
 ALLOWED_HOSTS = [host.strip() for host in os.getenv('ALLOWED_HOSTS', '').split(',') if host.strip()]
