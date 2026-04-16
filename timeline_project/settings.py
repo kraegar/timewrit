@@ -67,6 +67,8 @@ def pull_secrets_from_manager():
                     val = get_secret(oauth)
                     if val:
                         os.environ[oauth] = val
+                    else:
+                        sys.stderr.write(f"--- WARNING: Secret '{oauth}' not found in Secret Manager ---\n")
 
         except Exception as e:
             sys.stderr.write(f"--- SECRET MANAGER ERROR: {str(e)} ---\n")
