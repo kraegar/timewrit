@@ -75,6 +75,15 @@ INSTALLED_APPS = [
     'background_task',
 ]
 
+# Auth Pillar 1: Identity-Aware Proxy (IAP)
+USE_IAP = os.getenv('USE_IAP', 'False') == 'True'
+
+# Auth Pillar 2: Google OAuth2 (Social Login)
+USE_GOOGLE_OAUTH = os.getenv('USE_GOOGLE_OAUTH', 'False') == 'True'
+
+if USE_GOOGLE_OAUTH:
+    INSTALLED_APPS.append('social_django')
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -83,8 +92,12 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
 ]
 
+# Insert Google OAuth Middleware if enabled
+if USE_GOOGLE_OAUTH:
+    MIDDLEWARE.append('social_django.middleware.SocialAuthExceptionMiddleware')
+
 # Insert IAP Middleware if enabled
-if os.getenv('USE_IAP', 'False') == 'True':
+if USE_IAP:
     MIDDLEWARE.append('timeline.middleware.IAPMiddleware')
 
 MIDDLEWARE += [
@@ -98,6 +111,22 @@ SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
 
 ROOT_URLCONF = 'timeline_project.urls'
 
+# Authentication Backends
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+]
+
+if USE_GOOGLE_OAUTH:
+    AUTHENTICATION_BACKENDS.insert(0, 'social_core.backends.google.GoogleOAuth2')
+    SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.getenv('GOOGLE_CLIENT_ID')
+    SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
+    SOCIAL_AUTH_REDIRECT_IS_HTTPS = os.getenv('SECURE_SSL_REDIRECT', 'False') == 'True' or not DEBUG
+    
+    # Auth behavior settings
+    LOGIN_URL = '/auth/login/google-oauth2/'
+    LOGIN_REDIRECT_URL = '/admin/'
+    LOGOUT_REDIRECT_URL = '/'
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -108,6 +137,9 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'social_django.context_processors.backends',
+                'social_django.context_processors.login_redirect',
+                'timeline.context_processors.auth_settings',
             ],
         },
     },
