@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 import sys
 from pathlib import Path
+from urllib.parse import quote_plus
 from dotenv import load_dotenv
 import dj_database_url
 
@@ -39,7 +40,23 @@ def pull_secrets_from_manager():
                 try:
                     name = f"projects/{project_id}/secrets/{secret_name}/versions/latest"
                     response = client.access_secret_version(request={"name": name})
-                    return response.payload.data.decode("UTF-8")
+                    val = response.payload.data.decode("UTF-8").strip()
+                    
+                    # Smart Repair: If it's the DATABASE_URL, encode the password component
+                    if secret_name == 'DATABASE_URL' and val and '://' in val:
+                        try:
+                            # Split at the last '@' which separates credentials from host/socket
+                            creds, at, host = val.rpartition('@')
+                            if at:
+                                scheme, sep, user_pass = creds.partition('://')
+                                user, sep_p, password = user_pass.partition(':')
+                                if sep_p:
+                                    from urllib.parse import quote_plus
+                                    val = f"{scheme}{sep}{user}:{quote_plus(password)}@{host}"
+                        except Exception:
+                            pass # Fallback to original if repair fails
+                            
+                    return val
                 except Exception:
                     return None
 
