@@ -83,28 +83,6 @@ def pull_secrets_from_manager():
                     if val:
                         os.environ[oauth] = val
 
-            # 3. Connection Test (Internal verification)
-            db_url = os.getenv('DATABASE_URL')
-            if db_url:
-                try:
-                    import dj_database_url
-                    db_config = dj_database_url.parse(db_url)
-                    sys.stderr.write(f"--- DATABASE READY FOR: {db_config.get('NAME')} ---\n")
-                    
-                    # 4. DEEP PING: Actually attempt a query
-                    try:
-                        import psycopg2
-                        conn = psycopg2.connect(db_url, connect_timeout=5)
-                        cur = conn.cursor()
-                        cur.execute("SELECT 1;")
-                        cur.close()
-                        conn.close()
-                        sys.stderr.write("--- DEEP DATABASE PING: SUCCESS ---\n")
-                    except Exception as e:
-                        sys.stderr.write(f"--- DEEP DATABASE PING: FAILED: {str(e)} ---\n")
-                except Exception as e:
-                    sys.stderr.write(f"--- DATABASE CONFIG ERROR: {str(e)} ---\n")
-
         except Exception as e:
             sys.stderr.write(f"--- SECRET MANAGER ERROR: {str(e)} ---\n")
             pass
@@ -121,7 +99,8 @@ pull_secrets_from_manager()
 SECRET_KEY = 'django-insecure-z9ko8q%m=x!=&q^93s#0x0*dktfwd@170*qtrwrj#ax9k5ze(+'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
+# FORCING DEBUG TRUE TEMPORARILY TO CAPTURE SILENT 500 ERROR
+DEBUG = True
 
 # ALLOWED_HOSTS can be a comma-separated string in .env
 # Include internal Cloud Run domains and localhost for health checks
