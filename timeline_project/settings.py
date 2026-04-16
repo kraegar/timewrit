@@ -23,25 +23,50 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(os.path.join(BASE_DIR, '.env'), override=True)
 
 def pull_secrets_from_manager():
-    """Pulls secrets from Google Cloud Secret Manager if USE_SECRET_MANAGER is True."""
+    """
+    Pulls secrets from Google Secret Manager conditionally based on enabled features.
+    """
     if os.getenv('USE_SECRET_MANAGER', 'False') == 'True':
         project_id = os.getenv('GCP_PROJECT_ID')
         if not project_id:
             return
-        
+
         try:
             from google.cloud import secretmanager
             client = secretmanager.SecretManagerServiceClient()
-            parent = f"projects/{project_id}"
-            
-            for secret in client.list_secrets(request={"parent": parent}):
-                secret_name = secret.name.split('/')[-1]
-                version_path = f"{secret.name}/versions/latest"
-                response = client.access_secret_version(request={"name": version_path})
-                payload = response.payload.data.decode("UTF-8")
-                os.environ[secret_name] = payload
+
+            def get_secret(secret_name):
+                try:
+                    name = f"projects/{project_id}/secrets/{secret_name}/versions/latest"
+                    response = client.access_secret_version(request={"name": name})
+                    return response.payload.data.decode("UTF-8")
+                except Exception:
+                    return None
+
+            # 1. CORE: Always needed for production
+            for core in ['DATABASE_URL', 'SECRET_KEY', 'ALLOWED_HOSTS']:
+                val = get_secret(core)
+                if val:
+                    os.environ[core] = val
+
+            # 2. OPTIONAL: Only fetch if the feature flag is enabled
+            if os.getenv('USE_GCS', 'False') == 'True':
+                val = get_secret('GS_BUCKET_NAME')
+                if val:
+                    os.environ['GS_BUCKET_NAME'] = val
+
+            if os.getenv('USE_REDIS', 'False') == 'True':
+                val = get_secret('REDIS_URL')
+                if val:
+                    os.environ['REDIS_URL'] = val
+
+            if os.getenv('USE_GOOGLE_OAUTH', 'False') == 'True':
+                for oauth in ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET']:
+                    val = get_secret(oauth)
+                    if val:
+                        os.environ[oauth] = val
+
         except Exception as e:
-            # Troubleshooting: Print the error to logs
             sys.stderr.write(f"--- SECRET MANAGER ERROR: {str(e)} ---\n")
             pass
 
