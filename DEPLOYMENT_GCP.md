@@ -169,6 +169,20 @@ gcloud run jobs create timewrit-create-admin \
 gcloud run jobs execute timewrit-create-admin --region us-east1
 ```
 
+### Help System Initialization
+```bash
+gcloud run jobs create timewrit-load-help \
+    --image us-east1-docker.pkg.dev/[PROJECT_ID]/timewrit-repo/timewrit-app \
+    --region us-east1 \
+    --service-account timewrit-deployer@[PROJECT_ID].iam.gserviceaccount.com \
+    --command=python \
+    --args=manage.py,load_help_content \
+    --set-env-vars="USE_SECRET_MANAGER=True,GCP_PROJECT_ID=[PROJECT_ID],USE_GCS=True" \
+    --add-cloudsql-instances [PROJECT_ID]:us-east1:timewrit-db
+
+gcloud run jobs execute timewrit-load-help --region us-east1
+```
+
 ---
 
 ## 🌐 Phase 6: Google OAuth Handshake

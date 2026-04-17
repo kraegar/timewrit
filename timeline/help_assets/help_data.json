@@ -1,0 +1,436 @@
+{
+    "categories": [
+        {
+            "name": "Getting Started",
+            "order": 1
+        },
+        {
+            "name": "Data Management",
+            "order": 2
+        },
+        {
+            "name": "Advanced Features",
+            "order": 3
+        },
+        {
+            "name": "Administration",
+            "order": 4
+        }
+    ],
+    "topics": [
+        {
+            "title": "Introduction to TimeWrit",
+            "slug": "intro",
+            "category_name": "Getting Started",
+            "content": "# Introduction to TimeWrit\nWelcome to **TimeWrit**, a powerful platform designed for historical research, genealogy, and chronological storytelling.\n\n## The Interface at a Glance\nWhen you first open TimeWrit, you are presented with a dynamic, interactive workspace.\n\n![Main Interface Overview](/media/help_images/main_interface_overview.png)\n\n### 1. Navigation & Display Controls\n- **Zoom (+/-)**: Adjust the chronological scale of the timeline.\n- **FIT**: Automatically adjust the view to encompass all currently filtered events.\n- **PLAY**: Animate the progression of events through time.\n- **COMPARE**: Toggle the comparison view to analyze two timelines side-by-side.\n- **MAP**: View your events on an interactive geographical map.\n- **CHART (Graph)**: Switch to the non-linear relationship view.\n\n> [!NOTE]\n> For a deep dive into visualizing your project's data as a network, see [The Knowledge Graph](/help/knowledge-graph/).\n",
+            "order": 1,
+            "is_published": true,
+            "images": [
+                {
+                    "filename": "intro_welcome_70aCQbt.png",
+                    "caption": "Welcome to TimeWrit"
+                },
+                {
+                    "filename": "main_interface_overview.png",
+                    "caption": "Main Interface Overview"
+                },
+                {
+                    "filename": "navigation_controls_focused.png",
+                    "caption": "Navigation Controls"
+                }
+            ]
+        },
+        {
+            "title": "Navigating the Interface",
+            "slug": "navigating",
+            "category_name": "Getting Started",
+            "content": "The TimeWrit interface is designed to keep your research at your fingertips. From the main canvas to the advanced filter bar, every element is built for speed and clarity.\n\n## The Interface at a Glance\nUse the labeled diagram below to orient yourself within the application.\n\n### 1. Top Navigation Bar (Global)\nAccess the central hubs of the application:\n- **Bibliography**: Your citation library and source manager.\n- **Manage**: The command center for adding People, Locations, and Timelines.\n- **Help**: This documentation portal.\n\n### 2. The Search & Filter Bar\nThe toolbar above the canvas is your most powerful tool:\n- **Search**: Instantly find events by name, description, or person.\n- **View Toggles**: Switch between the standard **Timeline**, the geographical **Map**, and the **Knowledge Graph**.\n- **Layout Controls**: Toggle between \"Free\" layout (best for dense data) and \"Grouped\" layout (best for categorizing by person or location).\n\n### 3. The Interactive Canvas\nThis is where history comes alive. \n- **Zoom & Pan**: Use your mouse wheel or the controls on the right to navigate time.\n- **Event Cards**: Click any event to open its **Details Modal**, where you can see full descriptions, attachments, and bibliography links.\n\n> [!TIP]\n> **Pro Tip**: Use the **FIT** button in the toolbar to automatically zoom out and center the timeline on all your currently filtered events.\n\n---\n*Last updated: Mar 11, 2026*",
+            "order": 2,
+            "is_published": true,
+            "images": [
+                {
+                    "filename": "nav_labeled_ui_uhlTosr.png",
+                    "caption": "Interface Overview: nav_labeled_ui"
+                }
+            ]
+        },
+        {
+            "title": "Managing Timelines",
+            "slug": "manage-timelines",
+            "category_name": "Data Management",
+            "content": "Timelines are the primary containers for your events. They allow you to isolate different research projects—such as a specific military campaign, a family lineage, or a town's founding—while keeping the underlying data shared across your entire database.\n\n> [!TIP]\n> **Focus with Sub-Timelines**: You can create hierarchical timelines (e.g., \"Civil War > Battle of Gettysburg\"). Filter for the parent timeline to see everything, or select a sub-timeline to focus on a specific subset of events.\n\n### Visibility & Ownership\nEach timeline is owned by the researcher who created it. By default, timelines are private, but they can be shared with other researchers in your group.\n\n> [!IMPORTANT]\n> **Data Integrity**: Deleting a timeline does NOT delete the events within it. Events can exist in multiple timelines simultaneously, or even in no timeline at all.",
+            "order": 1,
+            "is_published": true,
+            "images": [
+                {
+                    "filename": "timeline_dropdown_view.png",
+                    "caption": "Timeline Dropdown"
+                },
+                {
+                    "filename": "timeline_admin_list.png",
+                    "caption": "Timeline Admin List"
+                },
+                {
+                    "filename": "timeline_edit_form_top.png",
+                    "caption": "Timeline Edit Top"
+                },
+                {
+                    "filename": "timeline_edit_form_options.png",
+                    "caption": "Timeline Edit Options"
+                }
+            ]
+        },
+        {
+            "title": "People & Family Trees",
+            "slug": "people-family-trees",
+            "category_name": "Data Management",
+            "content": "Organize your research around the actors of history. TimeWrit's People system automatically builds interactive lineage charts based on the relationships you define.\n\n### Defining Relationships\nLink two people using relationship types like **Parent/Child** or **Spouse**. \n\n> [!TIP]\n> **Auto-Recognition**: Once you link parents to a child, TimeWrit will automatically identify siblings and display them together on the family tree view.\n\n### The Dynamic Family Tree\nWhen you view a Person record, TimeWrit generates a 5-generation \"Snapshot\" tree. This is a node-link diagram that visualizes the connections between individuals.\n\n- **Ancestors**: Displays direct lineages up to Great-Grandparents.\n- **Descendants**: Displays lineages down to Grandchildren.\n- **Breadth**: Includes spouses and siblings at every tier to provide full genealogical context.\n\n> [!NOTE]\n> **Navigation**: Click on any person's node in the family tree to instantly navigate to their profile and refocus the tree on them.\n\n> [!IMPORTANT]\n> **Lineage Limits**: To keep the interface responsive, the family tree view is bounded to 5 generations. For massive lineages covering centuries, use the **Knowledge Graph** to explore further connections across the entire project.\n\n---\n*Last updated: Mar 11, 2026*",
+            "order": 3,
+            "is_published": true,
+            "images": [
+                {
+                    "filename": "wyatt_earp_tree.png",
+                    "caption": "Example Family Tree: The Earp Family"
+                }
+            ]
+        },
+        {
+            "title": "Locations & Mapping",
+            "slug": "locations-mapping",
+            "category_name": "Data Management",
+            "content": "History doesn't just happen in a time; it happens in a place. TimeWrit's Location system handles the complexities of geography over time.\n\n### Historical Aliases\nBorders move and names change. TimeWrit allows you to define **Aliases** with date ranges.\n- *Example*: A location might be \"Konigsberg\" until 1946, and \"Kaliningrad\" thereafter.\n- When an event occurs, TimeWrit automatically displays the name that was correct for that specific date.\n\n> [!IMPORTANT]\n> **Geocoding**: Ensure your locations have GPS coordinates to unlock the **Map View** in the main timeline.\n\n> [!TIP]\n> **Location Hierarchy**: Organize locations geographically (e.g., \"USA > Arizona > Cochise County > Tombstone\"). Events linked to \"Tombstone\" will automatically appear when you filter for any of the parent locations.",
+            "order": 4,
+            "is_published": true,
+            "images": [
+                {
+                    "filename": "places_gallery_ui.png",
+                    "caption": "Places Gallery"
+                },
+                {
+                    "filename": "map_markers_detail.png",
+                    "caption": "Map Markers Detail"
+                },
+                {
+                    "filename": "map_path_visualization.png",
+                    "caption": "Movement Path"
+                },
+                {
+                    "filename": "location_admin_form_main.png",
+                    "caption": "Location Admin"
+                },
+                {
+                    "filename": "location_aliases_inline.png",
+                    "caption": "Location Aliases"
+                }
+            ]
+        },
+        {
+            "title": "Adding & Editing Events",
+            "slug": "adding-editing-events",
+            "category_name": "Data Management",
+            "content": "Events are the foundation of your timeline, representing specific moments or spans of time.\n\n## Filling the Form\nThe event form captures complex research data while maintaining academic integrity.\n\n![Event Form Top](/media/help_images/event_admin_form_top.png)\n\n### Flexible Chronology\n- **Date Precision**: Choose between *Exact*, *Circa (c.)*, *Before*, or *After*.\n- **Date Granularity**: Controls the display format (Year, Month, or Day).\n\n### Mapping Connections\nLink individuals, primary locations, and narratives to each event to weave a cohesive social network.\n",
+            "order": 10,
+            "is_published": true,
+            "images": [
+                {
+                    "filename": "event_admin_form_top.png",
+                    "caption": "Event Form Top"
+                },
+                {
+                    "filename": "event_date_controls.png",
+                    "caption": "Date Controls"
+                },
+                {
+                    "filename": "event_relationships_m2m.png",
+                    "caption": "Relationships"
+                },
+                {
+                    "filename": "event_disputed_facts.png",
+                    "caption": "Disputed Facts"
+                }
+            ]
+        },
+        {
+            "title": "Managing People",
+            "slug": "people",
+            "category_name": "Data Management",
+            "content": "Manage the individuals in your project. Track their life spans, relationships, and involvement in events.\n- **Biographical Data**: Birth dates, death dates, and locations.\n- **Relationships**: Link parents, children, and spouses to build family trees.\n",
+            "order": 20,
+            "is_published": true,
+            "images": []
+        },
+        {
+            "title": "Geographical Locations",
+            "slug": "locations",
+            "category_name": "Data Management",
+            "content": "Geographical entities serve as the anchor for your events.\n- **Aliases**: Record multiple historical names for the same location.\n- **Hierarchy**: Nest locations (e.g., *City* inside *State*).\n",
+            "order": 30,
+            "is_published": true,
+            "images": []
+        },
+        {
+            "title": "Storytelling & Narratives",
+            "slug": "storytelling-narratives",
+            "category_name": "Advanced Features",
+            "content": "History is more than a list of facts; it is a series of interconnected stories. TimeWrit's **Stories** feature allows you to group events into narrative arcs.\n\n### Creating a Narrative\nA story acts as an overlay on your timeline. Events within a story can be given a specific **Sequence Number** to define their order in the narrative, regardless of their chronological date.\n\n> [!IMPORTANT]\n> **Narrative Overrides**: When viewing a Story, the chronology remains fixed, but the visual progression highlights the connections you've defined, guiding readers through the past.\n\n> [!TIP]\n> **Visual Distinction**: Give each story a unique color. This color will be reflected in the timeline cards when that story is active, making it easy to see which threads overlap.",
+            "order": 2,
+            "is_published": true,
+            "images": [
+                {
+                    "filename": "stories_dropdown_ui.png",
+                    "caption": "Stories Dropdown"
+                },
+                {
+                    "filename": "reading_view_narrative.png",
+                    "caption": "Reading Mode View"
+                },
+                {
+                    "filename": "story_admin_main.png",
+                    "caption": "Story Admin Form"
+                },
+                {
+                    "filename": "story_event_inline.png",
+                    "caption": "Story Event Inline"
+                }
+            ]
+        },
+        {
+            "title": "Exporting to PDF & Markdown",
+            "slug": "exporting-pdf-markdown",
+            "category_name": "Advanced Features",
+            "content": "Share your research with the world using TimeWrit's high-fidelity export tools.\n\n### PDF Exports\nGenerate professional Research Reports that include:\n- Chronological Event Lists\n- Full Bibliographies\n- High-resolution Images and Maps\n\n> [!IMPORTANT]\n> **Privacy Guards**: When exporting, you can choose to exclude **Private Research Notes** or **Unverified Facts**, ensuring your report only contains the information you're ready to share.\n\n### Markdown Export\nFor writers and bloggers, TimeWrit can export your narrative data as clean Markdown files, compatible with Obsidian, Hugo, and Jekyll.",
+            "order": 4,
+            "is_published": true,
+            "images": [
+                {
+                    "filename": "export_buttons_ui.png",
+                    "caption": "Export Buttons"
+                },
+                {
+                    "filename": "filtered_export_context.png",
+                    "caption": "Filtered View Context"
+                },
+                {
+                    "filename": "pdf_export_options_modal.png",
+                    "caption": "PDF Export Options"
+                }
+            ]
+        },
+        {
+            "title": "Data Import (CSV, JSON, GEDCOM)",
+            "slug": "importing",
+            "category_name": "Advanced Features",
+            "content": "TimeWrit supports importing data from various formats, allowing you to bring in research from other tools or use AI to extract events from raw text.\n\n## Supported Formats\nYou can import data into TimeWrit using the following formats:\n- **CSV (Comma Separated Values)**: The primary format for bulk-importing Events, People, or Locations.\n- **JSON (Historical Timeline)**: A full-fidelity format used for migrating data between TimeWrit projects.\n- **GEDCOM (.ged)**: The industry standard for genealogical data, allowing you to import family trees and individual records.\n\n> [!IMPORTANT]\n> **Data Ownership**: All imported records are assigned to you and tagged with \"Imported via [Format]\" to help you track their provenance.\n\n## Importing CSV and JSON Data\nThe primary import interface is located in the site administration under **Import Data**.\n\n![Import Data Interface](/media/help_images/data_import_main.png)\n\n### Field Breakdown (CSV Events)\nWhen importing events via CSV, the following columns are supported:\n- **title**: A short, descriptive name for the event.\n- **description**: Detailed markdown-enabled text.\n- **start_date**: ISO 8601 format (`YYYY-MM-DD`). \n- **end_date**: Optional. Defines a duration.\n- **location**: Name of the location. TimeWrit will automatically link to existing locations or create new ones.\n- **people**: Comma-separated list of individuals involved.\n- **timelines**: Comma-separated list of target timelines.\n\n## AI Data Extraction\nIf you have raw notes or a PDF document, you can use an AI (like Claude or ChatGPT) to generate a compatible CSV for you.\n\n1. Navigate to the **Import Data** page.\n2. Click the **Get AI Prompt** button.\n3. Select your import type (Events, People, or Locations).\n4. Copy the prompt and paste it into your AI of choice along with your data.\n\n![AI Prompt Modal](/media/help_images/ai_prompt_modal.png)\n\n> [!TIP]\n> Always review the CSV output from an AI before importing to ensure date formats and column headers are exact.\n\n## GEDCOM Import\nFor genealogical researchers, the GEDCOM importer allows for deep family tree integration.\n\n![GEDCOM Import Interface](/media/help_images/gedcom_import_page.png)\n\n1. Navigate to **Timeline > GEDCOM Import** in the admin.\n2. Select an optional **Target Timeline**. If selected, all birth and death events from the GEDCOM will be added to this timeline.\n3. Upload your `.ged` file.\n\nTimeWrit recognizes GEDCOM 5.5.1 standards, including recursive family relationships (Spouse, Parent, Child) and source citations.\n",
+            "order": 6,
+            "is_published": true,
+            "images": [
+                {
+                    "filename": "data_import_main.png",
+                    "caption": "Import Data Interface"
+                },
+                {
+                    "filename": "ai_prompt_modal.png",
+                    "caption": "AI Data Extraction Prompt"
+                },
+                {
+                    "filename": "gedcom_import_page.png",
+                    "caption": "GEDCOM Import Interface"
+                }
+            ]
+        },
+        {
+            "title": "Disputed Facts & Research",
+            "slug": "disputes",
+            "category_name": "Advanced Features",
+            "content": "Historical research often involves conflicting evidence. TimeWrit provides a robust toolset for tracking disputed claims, investigation progress, and public feedback without cluttering your primary narrative.\n\n## Disputed Facts\nA **Disputed Fact** allows you to record an alternative value for a specific field (e.g., a different birth date or name spelling) alongside the primary record.\n\n### How to use:\n1. Open any record (Person, Location, Event) in the administration interface.\n2. Scroll to the **Disputed Facts** inline section.\n3. Select the **Field Name** being contested.\n4. Provide the **Alternative Value** and link to the **Source** supporting this claim.\n\n![Disputed Facts Inline](/media/help_images/research_inlines.png)\n\n> [!TIP]\n> Use the **Notes** field to explain *why* the evidence is conflicting. This helps future researchers (and your future self) understand the context of the dispute.\n\n## Research Questions\nInvestigative work often requires long-term follow-up. Use **Research Questions** to track what needs discovery.\n\n- **Status Tracking**: Mark questions as *Open*, *Answered/Resolved*, or *Deferred*.\n- **Ownership**: Questions are private to the data owner.\n- **Centralized View**: Monitor all investigations across your collection in the **Research questions** list view.\n\n![Research Questions List](/media/help_images/research_questions.png)\n\n## Public Comments & Corrections\nIf your timeline is public, other researchers can submit comments or corrections.\n- **Moderation Required**: Comments appear in the **Public comments** list but are NOT visible to others until you approve them.\n- **Privacy**: Submitters can provide an email address for private follow-up.\n\n![Public Comments List](/media/help_images/public_comments.png)\n\n> [!IMPORTANT]\n> **Resolution**: When a dispute is settled, check the **Is resolved** box. The alternative value will remain in the database for audit purposes but will be visually marked as settled in specialized research views.\n",
+            "order": 7,
+            "is_published": true,
+            "images": [
+                {
+                    "filename": "research_inlines.png",
+                    "caption": "Research Inlines"
+                },
+                {
+                    "filename": "disputed_facts.png",
+                    "caption": "Disputed Facts List"
+                },
+                {
+                    "filename": "research_questions.png",
+                    "caption": "Research Questions List"
+                },
+                {
+                    "filename": "public_comments.png",
+                    "caption": "Public Comments List"
+                }
+            ]
+        },
+        {
+            "title": "The Knowledge Graph",
+            "slug": "knowledge-graph",
+            "category_name": "Advanced Features",
+            "content": "While the Timeline shows *when* things happened, the **Knowledge Graph** shows *how* they are connected. \n\n![Knowledge Graph Overview](/media/help_images/graph_view_overview.png)\n\n## Interactive Discovery\n- **Click and Drag**: Move nodes around to organize your mental model.\n- **Click**: Open the full details of any person, event, or location in the side panel.\n\n## Understanding the Nodes\n- **Green (Person Icon)**: Represents individuals and their social connections.\n- **Blue (Solid Dot)**: Represents **Events**.\n- **Orange (Map Pin)**: Represents **Locations**.\n- **Dark Grey (Document Icon)**: Represents **Sources**.\n",
+            "order": 10,
+            "is_published": true,
+            "images": [
+                {
+                    "filename": "graph_view_overview.png",
+                    "caption": "Knowledge Graph Overview"
+                }
+            ]
+        },
+        {
+            "title": "Advanced Interface Topics",
+            "slug": "advanced-topics",
+            "category_name": "Advanced Features",
+            "content": "Once you are comfortable with basic navigation, TimeWrit offers specialized tools for deep correlation.\n\n## Grouping Mode\nThe **Grouping** dropdown segments your timeline into horizontal \"swim lanes\" based on common attributes like **Timeline**, **Person**, or **Story**.\n\n## Compare Mode\n**Compare Mode** allows you to render two independent data sets side-by-side on split screens.\n\n![Compare Mode](/media/help_images/compare_mode_split.png)\n\n## Playback Mode\nClick the **PLAY** button to activate animated discovery. The events will appear and vanish on the map in real-time as the scrubber moves.\n",
+            "order": 30,
+            "is_published": true,
+            "images": [
+                {
+                    "filename": "grouping_mode_active.png",
+                    "caption": "Grouping Mode"
+                },
+                {
+                    "filename": "compare_mode_split.png",
+                    "caption": "Compare Mode"
+                },
+                {
+                    "filename": "playback_controls.png",
+                    "caption": "Playback Controls"
+                }
+            ]
+        },
+        {
+            "title": "Sources & Bibliography",
+            "slug": "sources",
+            "category_name": "Advanced Features",
+            "content": "TimeWrit is a tool for historical evidence. Every date and location can be backed by a primary or secondary source.\n\n## The Citation Library\nAccess the central repository by clicking **Bibliography** in the main header.\n\n![Citation Library](/media/help_images/citation_library_view.png)\n\n## Citing Evidence\nCitations are displayed as numerical superscripts (e.g., `[1]`) next to the specific field they support. The system automatically numbers citations and generates a full list at the bottom of every detail card.\n",
+            "order": 40,
+            "is_published": true,
+            "images": [
+                {
+                    "filename": "sources_library_list.png",
+                    "caption": "Sources Library List"
+                },
+                {
+                    "filename": "source_detail_view.png",
+                    "caption": "Source Detail View"
+                },
+                {
+                    "filename": "event_citations_view.png",
+                    "caption": "Event Citations View"
+                },
+                {
+                    "filename": "citation_library_view.png",
+                    "caption": "Citation Library View"
+                }
+            ]
+        },
+        {
+            "title": "Cloning Entities",
+            "slug": "cloning",
+            "category_name": "Advanced Features",
+            "content": "Copy existing entities (Events, People, Locations) into new ones to speed up data entry for similar records.\nUse the **CLONE** button in the administration forms.\n",
+            "order": 50,
+            "is_published": true,
+            "images": []
+        },
+        {
+            "title": "Chronological Storytelling",
+            "slug": "storytelling",
+            "category_name": "Advanced Features",
+            "content": "Weave events into linear narratives using the **Storytelling** module.\n- **Sequencing**: Define the order of events within a specific story.\n- **Thematic Colors**: Tag stories with colors for visual distinction on the timeline.\n",
+            "order": 60,
+            "is_published": true,
+            "images": []
+        },
+        {
+            "title": "Permissions & Ownership",
+            "slug": "permissions",
+            "category_name": "Advanced Features",
+            "content": "Manage record ownership and collaborator access.\n- **Private Flags**: Mark sensitive research data as internal-only.\n- **Owner Consistency**: Ensure your team has the correct permissions to edit imported data.\n",
+            "order": 70,
+            "is_published": true,
+            "images": [
+                {
+                    "filename": "user_management.png",
+                    "caption": "User Management"
+                },
+                {
+                    "filename": "role_definitions.png",
+                    "caption": "Role Definitions"
+                },
+                {
+                    "filename": "ownership_filters.png",
+                    "caption": "Ownership Filters"
+                }
+            ]
+        },
+        {
+            "title": "The Research Dashboard",
+            "slug": "research-dashboard",
+            "category_name": "Advanced Features",
+            "content": "The **Research Dashboard** is a centralized Kanban board designed to help you manage investigative tasks across your entire project. Instead of jumping between individual people or locations, you can see every open question in one unified view.\n\n## Accessing the Dashboard\nYou can find the Dashboard in the main **Admin sidebar** under the \"🎯 Research Dashboard\" link. Access is restricted to users with the **Researcher** role or Superusers.\n\n![Research Dashboard Overview](/media/help_images/research_dashboard_overview.png)\n\n## The Kanban Board\nTasks are organized into three primary statuses:\n\n- **Open Questions**: Your active to-do list. New questions appear here by default.\n- **Deferred**: Use this for questions that require information you don't have yet. It keeps them visible but separated from your immediate priorities.\n- **Answered**: Once a mystery is solved, it moves here for historical record.\n\n## Understanding Priorities\nEvery task carries a color-coded priority level that determines its visual prominence and sorting order:\n\n![Priority Card Detail](/media/help_images/research_card_detail.png)\n\n- **High (Red)**: Critical investigative threads. These automatically float to the top of the \"Open\" column.\n- **Medium (Amber)**: Standard research tasks.\n- **Low (Grey)**: Background research or minor details.\n\n## Quick Actions\nTo maintain research momentum, the dashboard includes **Quick Action** buttons:\n- **Resolve**: Instantly marks a task as \"Answered\".\n- **Defer**: Moves the task to the secondary column.\n- **Re-open**: Available in the Deferred/Answered columns to bring a task back to \"Open\" status.\n- **Edit**: Opens the full record for detailed answer entry.\n\n> [!TIP]\n> Click the entity name (e.g., \"John Henry (Doc) Holliday\") at the top of any card to jump directly to that entity's full administration page.\n",
+            "order": 80,
+            "is_published": true,
+            "images": [
+                {
+                    "filename": "research_dashboard_overview.png",
+                    "caption": "Research Dashboard Overview"
+                },
+                {
+                    "filename": "research_card_detail.png",
+                    "caption": "Priority Card Detail"
+                }
+            ]
+        },
+        {
+            "title": "Bulk Actions & Cloning",
+            "slug": "bulk-actions",
+            "category_name": "Administration",
+            "content": "TimeWrit allows you to take data from other researchers and create independent copies in your own collection. This ensures you can edit descriptions, add private notes, or change dates without affecting the shared source of truth.\n\n## Cloning Methods\nThere are three main ways to duplicate data in TimeWrit:\n\n### 1. Quick Copy (List Views)\nFound in the **Copy** column of list views (Timelines, People, Locations, etc.). This creates an instant standalone copy of that specific record in your collection.\n\n![Quick Copy Button](/media/help_images/list_view_quick_copy.png)\n\n### 2. Bulk Quick Copy (Admin Actions)\nYou can copy multiple items at once using Admin Actions.\n1. Select the items via the checkboxes in the list view.\n2. Open the **Actions** dropdown.\n3. Select **Quick Copy selected to my collection**.\n4. Click **Go**.\n\n![Bulk Actions Dropdown](/media/help_images/admin_timeline_actions.png)\n\n### 3. Full Deep Copy (Timelines)\nFor Timelines specifically, a \"Deep Copy\" is available. This duplicates the timeline record **and every event within that timeline**.\n- Because this can involve hundreds of records, it is processed in the background.\n- You will receive a notification (or can check the background tasks) when it is complete.\n\n## Data Privacy & Integrity\nWhen an item is cloned:\n- **Researcher Notes** are cleared to protect the original author's private research.\n- **Needs Research** status is reset to `False`.\n- **Ownership** is assigned to you.\n- **Provenance**: The new record will have a permanent link back to the `cloned_from` original record for audit purposes.\n\n> [!IMPORTANT]\n> **Timeline Pollution**: When cloning events, TimeWrit only maintains links to timelines that you already own. This prevents your private clones from appearing on other researchers' public timelines.\n\n## When to Clone\nOnly create a copy if you intend to:\n1. Add private biographical notes that shouldn't be shared.\n2. Adjust dates or descriptions based on your own specialized research.\n3. Combine events from multiple sources into a new, unique timeline.\n",
+            "order": 2,
+            "is_published": true,
+            "images": [
+                {
+                    "filename": "list_view_quick_copy.png",
+                    "caption": "Quick Copy Button"
+                },
+                {
+                    "filename": "admin_timeline_actions.png",
+                    "caption": "Bulk Actions Dropdown"
+                },
+                {
+                    "filename": "save_a_copy_button.png",
+                    "caption": "Detail View Context"
+                }
+            ]
+        },
+        {
+            "title": "Field Customization",
+            "slug": "customization",
+            "category_name": "Administration",
+            "content": "TimeWrit allows you to customize how data is categorized and displayed through Tags and Stories. These tools help you organize complex research into manageable themes and narratives.\n\n## Tags\n**Tags** are lightweight labels used for broad categorization (e.g., \"Military\", \"Political\", \"Genealogy\").\n\n### Managing Tags\nYou can manage your collection of tags in the **Tags** list view. Each tag can have a custom color, which is used to highlight associations throughout the application.\n\n![Tags Management](/media/help_images/tags_management.png)\n\n### Creating/Editing a Tag\n- **Name**: A descriptive label for the category.\n- **Color**: A Hex color code (e.g., `#3B82F6`) or a CSS/Tailwind class. This color will be used for visual cues on the timeline and map.\n- **Research Notes**: Internal-only notes about why this tag was created or how it should be used.\n\n![Tag Editor](/media/help_images/tag_editor.png)\n\n## Stories\n**Stories** are used to group related events into a cohesive narrative sequence. Unlike Tags, Stories are often used for presentation, allowing you to highlight specific \"pathways\" through time.\n\n### Managing Stories\nThe **Stories** list view provides an overview of all narrative threads in your collection.\n\n![Stories Management](/media/help_images/stories_management.png)\n\n### Creating/Editing a Story\n- **Title & Description**: Define the narrative scope of the story.\n- **Color**: Set a distinctive color for the story's visual representation.\n- **Tags**: You can associate tags with stories to further categorize your narratives.\n\n![Story Editor](/media/help_images/story_editor.png)\n\n> [!TIP]\n> **Visual Organization**: Use vibrant, high-contrast colors for Tags and Stories. This makes it easier to spot related items when viewing large, complex timelines or dense geographical maps.\n\n> [!IMPORTANT]\n> **Ordering Events**: When adding events to a Story, you can use the **Sequence** field to manually override the chronological order. This is vital for maintaining a narrative flow when multiple events occur on the same day.\n",
+            "order": 3,
+            "is_published": true,
+            "images": [
+                {
+                    "filename": "tags_management.png",
+                    "caption": "Tags Management"
+                },
+                {
+                    "filename": "tag_editor.png",
+                    "caption": "Tag Editor"
+                },
+                {
+                    "filename": "stories_management.png",
+                    "caption": "Stories Management"
+                },
+                {
+                    "filename": "story_editor.png",
+                    "caption": "Story Editor"
+                }
+            ]
+        }
+    ]
+}
