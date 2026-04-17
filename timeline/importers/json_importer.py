@@ -229,7 +229,7 @@ class JsonEventImporter:
     def _import_stories(self, stories: List[Dict]):
         for s in stories:
             Story.objects.update_or_create(
-                title=s['title'],
+                title=s.get('title') or s.get('story_title'),
                 defaults={
                     'description': s.get('description', ''),
                     'color': s.get('color', '#8B5CF6'),
@@ -249,7 +249,7 @@ class JsonEventImporter:
                 PersonRelationship.objects.update_or_create(
                     from_person=from_p,
                     to_person=to_p,
-                    relationship_type=r['type'],
+                    relationship_type=r.get('type') or r.get('relationship_type'),
                     defaults={
                         'start_date': parse_date(r['start_date']) if r.get('start_date') else None,
                         'end_date': parse_date(r['end_date']) if r.get('end_date') else None,
@@ -269,8 +269,11 @@ class JsonEventImporter:
                 location = Location.objects.filter(name=e.get('location_name')).first() if e.get('location_name') else None
                 end_loc = Location.objects.filter(name=e.get('end_location_name')).first() if e.get('end_location_name') else None
                 
+                # Use 'event_title' if available to avoid mangled tooltip 'title'
+                canonical_title = e.get('event_title') or e.get('title')
+                
                 event, created = TimelineEvent.objects.update_or_create(
-                    title=e['title'],
+                    title=canonical_title,
                     start_date=parse_date(e['start_date']),
                     owner=self.user,
                     defaults={
