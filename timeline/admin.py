@@ -54,6 +54,8 @@ class OwnedAdmin(admin.ModelAdmin):
     Provides a 'Clone to My Collection' action.
     """
     def save_model(self, request, obj, form, change):
+        print(f"🔥 ADMIN_SAVE_DIAGNOSTIC: Saving {obj._meta.model_name} '{obj}'")
+        print(f"   - Request FILES: {list(request.FILES.keys())}")
         if not obj.owner_id:
             obj.owner = request.user
         super().save_model(request, obj, form, change)

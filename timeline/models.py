@@ -253,18 +253,17 @@ class Person(models.Model):
         ordering = ['name']
 
     def save(self, *args, **kwargs):
-        import logging
-        logger = logging.getLogger(__name__)
+        print(f"🔥 IMAGE_SAVE_DIAGNOSTIC: Saving Person '{self.name}' (ID: {self.pk})")
         if self.image:
-            logger.info(f"🔍 DEBUG: Saving Person '{self.name}' with image '{self.image.name}'")
+            print(f"   - Image Field Name: '{self.image.name}'")
             try:
-                logger.info(f"   - Storage: {self.image.storage.__class__.__name__}")
+                print(f"   - Storage Backend: {self.image.storage.__class__.__name__}")
                 if hasattr(self.image.storage, 'bucket_name'):
-                    logger.info(f"   - Bucket: {self.image.storage.bucket_name}")
+                    print(f"   - Bucket: {self.image.storage.bucket_name}")
             except Exception as e:
-                logger.error(f"   - Storage Debug Error: {e}")
+                print(f"   - Storage Debug Error: {e}")
         else:
-            logger.info(f"🔍 DEBUG: Saving Person '{self.name}' with NO IMAGE")
+            print("   - Image Field is EMPTY/NONE")
 
         super().save(*args, **kwargs)
         
