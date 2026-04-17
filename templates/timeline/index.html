@@ -3445,6 +3445,8 @@
                             end: item.end || undefined,
                             title: item.title,
                             type: item.end ? 'range' : 'point',
+                            location: item.location,
+                            end_location: item.end_location,
                             group: laneId,
                             className: item.status ? 'status-' + item.status : '',
                             style: styleStr

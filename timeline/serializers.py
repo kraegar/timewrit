@@ -389,8 +389,18 @@ def serialize_event(event, sources_cache=None, request_user=None, include_privat
         'end_date_granularity': event.end_date_granularity,
         'end_date_source': serialize_source(event.end_date_source, sources_cache, include_private),
         'location_name': event.location.name if event.location else None,
+        'location': {
+            'id': event.location.id,
+            'name': event.location.name,
+            'coordinates': event.location.coordinates
+        } if event.location else None,
         'location_source': serialize_source(event.location_source, sources_cache, include_private),
         'end_location_name': event.end_location.name if event.end_location else None,
+        'end_location': {
+            'id': event.end_location.id,
+            'name': event.end_location.name,
+            'coordinates': event.end_location.coordinates
+        } if event.end_location else None,
         'end_location_source': serialize_source(event.end_location_source, sources_cache, include_private),
         'owner': event.owner.username if event.owner else None,
         'status': event.status,
