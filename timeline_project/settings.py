@@ -312,8 +312,8 @@ MEDIA_ROOT = BASE_DIR / 'media'
 if os.getenv('USE_GCS', 'False') == 'True':
     from datetime import timedelta
     # Media files (user uploads) — private bucket with signed URLs.
-    GS_BUCKET_NAME = os.getenv('GS_BUCKET_NAME')
-    GS_PROJECT_ID = os.getenv('GCP_PROJECT_ID')
+    GS_PROJECT_ID = os.getenv('GCP_PROJECT_ID', 'bg-helpers')
+    GS_BUCKET_NAME = os.getenv('GS_BUCKET_NAME', 'timewrit-assets-bg-helpers')
     
     STORAGES = {
         "default": {
@@ -321,10 +321,10 @@ if os.getenv('USE_GCS', 'False') == 'True':
             "OPTIONS": {
                 "bucket_name": GS_BUCKET_NAME,
                 "project_id": GS_PROJECT_ID,
-                "location": "media",                    # Store everything under the 'media/' prefix
-                "querystring_auth": True,               # Generate signed URLs automatically
-                "default_acl": None,                    # Keep objects private (uniform bucket-level access)
-                "expiration": timedelta(hours=1),       # Signed URLs expire after 1 hour
+                "location": "media",
+                "querystring_auth": True,
+                "default_acl": None,
+                "expiration": timedelta(hours=1),
                 "object_parameters": {
                     "Cache-Control": "private, max-age=3600",
                 },
