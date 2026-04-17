@@ -322,11 +322,11 @@ if os.getenv('USE_GCS', 'False') == 'True':
                 "bucket_name": GS_BUCKET_NAME,
                 "project_id": GS_PROJECT_ID,
                 "location": "media",
-                "querystring_auth": True,
-                "default_acl": None,
+                "querystring_auth": False,   # DIAGNOSTIC: set False to test if signBlob is the issue
+                "default_acl": "publicRead",  # Required when querystring_auth is False
                 "expiration": timedelta(hours=1),
                 "object_parameters": {
-                    "Cache-Control": "private, max-age=3600",
+                    "Cache-Control": "public, max-age=3600",
                 },
             },
         },
