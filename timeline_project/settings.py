@@ -197,33 +197,41 @@ WSGI_APPLICATION = 'timeline_project.wsgi.application'
 
 
 # Database configuration
-# Manual parsing to handle special characters (#, %) without URL encoding issues
 DATABASE_URL_STR = os.getenv('DATABASE_URL')
-if DATABASE_URL_STR and '@/' in DATABASE_URL_STR:
-    try:
-        # Split: postgres://user:pass@/dbname?host=/cloudsql/instance
-        creds_part, _, rest = DATABASE_URL_STR.partition('@/')
-        scheme, _, user_pass = creds_part.partition('://')
-        user, _, password = user_pass.partition(':')
-        db_name, _, params = rest.partition('?')
-        host = ""
-        if 'host=' in params:
-            host = params.split('host=')[1].split('&')[0]
-            
+
+if DATABASE_URL_STR:
+    if 'sqlite' in DATABASE_URL_STR:
         DATABASES = {
-            'default': {
-                'ENGINE': 'django.db.backends.postgresql',
-                'NAME': db_name,
-                'USER': user,
-                'PASSWORD': password,
-                'HOST': host,
-                'PORT': '',
-                'CONN_MAX_AGE': 600,
-            }
+            'default': dj_database_url.config(default=DATABASE_URL_STR, conn_max_age=600)
         }
-    except Exception:
-        DATABASES = {'default': dj_database_url.config(default=DATABASE_URL_STR, conn_max_age=600)}
+    else:
+        # Robust manual parsing for Cloud SQL URLs that may contain special characters (#, %, $) in passwords
+        try:
+            import re
+            # Expected format: postgres://USER:PASSWORD@/DBNAME?host=/cloudsql/INSTANCE
+            pattern = r'postgres://(?P<user>[^:]+):(?P<password>.+)@/(?P<name>[^?]+)\?host=(?P<host>.+)'
+            match = re.search(pattern, DATABASE_URL_STR)
+            
+            if match:
+                db_data = match.groupdict()
+                DATABASES = {
+                    'default': {
+                        'ENGINE': 'django.db.backends.postgresql',
+                        'NAME': db_data['name'],
+                        'USER': db_data['user'],
+                        'PASSWORD': db_data['password'],
+                        'HOST': db_data['host'],
+                        'PORT': '',
+                        'CONN_MAX_AGE': 600,
+                    }
+                }
+            else:
+                # Fallback to standard dj_database_url if regex doesn't match
+                DATABASES = {'default': dj_database_url.config(default=DATABASE_URL_STR, conn_max_age=600)}
+        except Exception:
+            DATABASES = {'default': dj_database_url.config(default=DATABASE_URL_STR, conn_max_age=600)}
 else:
+    # No DATABASE_URL found, use local SQLite as final fallback
     DATABASES = {
         'default': dj_database_url.config(
             default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
