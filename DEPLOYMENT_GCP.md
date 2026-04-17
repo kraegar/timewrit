@@ -106,16 +106,28 @@ gcloud projects add-iam-policy-binding [PROJECT_ID] \
 
 ### 2. GCS Storage Setup
 ```bash
-# Create the Storage Bucket (Must be globally unique)
-gsutil mb gs://[YOUR_UNIQUE_BUCKET_NAME]
+# Create the Storage Bucket
+# NOTE: --uniform-bucket-level-access is required for security.
+# NOTE: public-access-prevention=enforced means ONLY signed URLs can serve content.
+gcloud storage buckets create gs://[YOUR_UNIQUE_BUCKET_NAME] \
+    --location=us-east1 \
+    --uniform-bucket-level-access
 
-# Grant Storage Admin (To manage media uploads/deletes)
-gcloud projects add-iam-policy-binding [PROJECT_ID] \
+# Grant Storage Object Admin (to manage media uploads/deletes)
+gcloud storage buckets add-iam-policy-binding gs://[YOUR_UNIQUE_BUCKET_NAME] \
     --member="serviceAccount:timewrit-deployer@[PROJECT_ID].iam.gserviceaccount.com" \
     --role="roles/storage.objectAdmin"
 
-# Grant Service Account Token Creator (Required for GCS Signed URLs)
+# Grant Service Account Token Creator at the PROJECT level
+# (required so the running service can call the IAM signBlob API)
 gcloud projects add-iam-policy-binding [PROJECT_ID] \
+    --member="serviceAccount:timewrit-deployer@[PROJECT_ID].iam.gserviceaccount.com" \
+    --role="roles/iam.serviceAccountTokenCreator"
+
+# CRITICAL: Also grant Token Creator on the service account resource ITSELF.
+# Without this self-impersonation grant, Cloud Run cannot sign GCS URLs.
+gcloud iam service-accounts add-iam-policy-binding \
+    timewrit-deployer@[PROJECT_ID].iam.gserviceaccount.com \
     --member="serviceAccount:timewrit-deployer@[PROJECT_ID].iam.gserviceaccount.com" \
     --role="roles/iam.serviceAccountTokenCreator"
 ```
@@ -214,16 +226,46 @@ Navigate to **APIs & Services > Credentials** and create an **OAuth 2.0 Client I
 
 ---
 
-## 🩺 Appendix: Troubleshooting
+## 🩺 Appendix: Troubleshooting GCS Signed URLs
 
-### Images Not Loading (GCS)
-If you see broken images in production despite a successful upload:
+### How It Works
+TimeWrit uses a **private GCS bucket** with `public_access_prevention: enforced` and `uniform-bucket-level-access`. Images cannot be served via plain public URLs — the only access mechanism is **V4 Signed URLs**: temporary (1-hour) authenticated links generated server-side by the application.
 
-1.  **Check IAM Permissions**: Ensure the service account has the `Service Account Token Creator` and `Storage Object Admin` roles. Without Token Creator, the app cannot "sign" the private URLs for your browser to view.
-2.  **Verify Secrets**: Check that `GS_BUCKET_NAME` matches exactly what you created in Phase 3.
-3.  **CORS Policy**: If you are using the Knowledge Graph or Map and images still don't render, you may need to set a CORS policy on the bucket:
-    ```bash
-    echo '[{"origin": ["*"],"method": ["GET"],"maxAgeSeconds": 3600}]' > cors-json-file.json
-    gsutil cors set cors-json-file.json gs://[YOUR_BUCKET_NAME]
-    ```
-4.  **Time Sync**: If your server time (on Cloud Run) doesn't match Google's time, signed URLs will be invalid. This is rare on managed infrastructure but can happen on custom VMs.
+On Cloud Run, the `google-cloud-storage` library cannot sign URLs automatically because the Compute Engine credential doesn't expose a usable signer by default. The application works around this using `google.auth.impersonated_credentials` to explicitly self-impersonate the running service account at startup.
+
+### Required Roles (All Three Are Mandatory)
+
+| Role | Granted On | Why |
+|---|---|---|
+| `roles/storage.objectAdmin` | The GCS Bucket | Allows the app to upload and manage files |
+| `roles/iam.serviceAccountTokenCreator` | The Project | Allows the account to call the IAM `signBlob` API |
+| `roles/iam.serviceAccountTokenCreator` | The Service Account **itself** | Allows self-impersonation — **this is the critical one most guides miss** |
+
+### Symptom Diagnosis
+
+| Symptom | Most Likely Cause | Fix |
+|---|---|---|
+| Admin shows **"No file chosen"** despite a successful upload (verified via History) | `image.url` raises a signing exception, silently swallowed by the Django template | Apply the self-impersonation IAM grant (see Phase 3 above) |
+| Admin shows **"Currently: person_images/..."** but image is broken (403) | Objects are not publicly readable — this is correct behaviour; signed URLs must work | Verify signing credential setup in `settings.py` |
+| Files upload to **bucket root** instead of `media/person_images/` | `GS_LOCATION` / `location` not set in `STORAGES` `OPTIONS` | Ensure `"location": "media"` is set |
+| Signed URL fails silently after correct IAM setup | Cloud Run credential not exposing service account email to the signer | `impersonated_credentials` block in `settings.py` handles this automatically |
+
+### Verifying IAM Grants
+```bash
+# Check project-level roles for the service account
+gcloud projects get-iam-policy [PROJECT_ID] \
+    --filter="bindings.members:timewrit-deployer@[PROJECT_ID].iam.gserviceaccount.com" \
+    --format="json"
+
+# Check the self-impersonation grant on the service account resource
+# Should show roles/iam.serviceAccountTokenCreator bound to itself
+gcloud iam service-accounts get-iam-policy \
+    timewrit-deployer@[PROJECT_ID].iam.gserviceaccount.com \
+    --format="json"
+
+# Check bucket-level roles
+gcloud storage buckets get-iam-policy gs://[YOUR_UNIQUE_BUCKET_NAME] --format="json"
+```
+
+### CORS (Only Needed for Direct Browser Fetch Requests)
+CORS is **not** required for the Django Admin image display or modal images — those render via server-side signed URL generation. CORS only becomes relevant if frontend JavaScript makes a direct `fetch()` or `XMLHttpRequest` call to a GCS URL (e.g., a PDF export that loads images client-side).
