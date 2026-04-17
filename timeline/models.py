@@ -253,18 +253,6 @@ class Person(models.Model):
         ordering = ['name']
 
     def save(self, *args, **kwargs):
-        print(f"🔥 IMAGE_SAVE_DIAGNOSTIC: Saving Person '{self.name}' (ID: {self.pk})")
-        if self.image:
-            print(f"   - Image Field Name: '{self.image.name}'")
-            try:
-                print(f"   - Storage Backend: {self.image.storage.__class__.__name__}")
-                if hasattr(self.image.storage, 'bucket_name'):
-                    print(f"   - Bucket: {self.image.storage.bucket_name}")
-            except Exception as e:
-                print(f"   - Storage Debug Error: {e}")
-        else:
-            print("   - Image Field is EMPTY/NONE")
-
         super().save(*args, **kwargs)
         
         # Handle Birth Event

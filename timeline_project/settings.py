@@ -350,27 +350,3 @@ if os.getenv('USE_CLOUD_LOGGING', 'False') == 'True':
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-# --- STARTUP DIAGNOSTIC LOGGING ---
-import logging
-import os
-diagnostic_logger = logging.getLogger('startup_diagnostic')
-print("\n🚀 TIMEWRIT STARTUP DIAGNOSTIC")
-print(f"   - USE_GCS: {os.getenv('USE_GCS', 'False')}")
-print(f"   - USE_SECRET_MANAGER: {os.getenv('USE_SECRET_MANAGER', 'False')}")
-try:
-    from django.conf import settings
-    # We can't access settings directly here as it's still being configured,
-    # but we can check the variables we just defined.
-    db_engine = DATABASES['default']['ENGINE']
-    print(f"   - DB Engine: {db_engine}")
-    if 'sqlite' in db_engine.lower():
-        print("   ⚠️ WARNING: Fallback to SQLite detected!")
-    
-    storage_backend = STORAGES['default']['BACKEND']
-    print(f"   - Default Storage: {storage_backend}")
-    if 'gcloud' in storage_backend.lower():
-        print(f"   - GCS Bucket: {STORAGES['default'].get('OPTIONS', {}).get('bucket_name', 'MISSING')}")
-except Exception as e:
-    print(f"   - Diagnostic Error: {e}")
-print("🚀 END DIAGNOSTIC\n")
