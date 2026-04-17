@@ -266,6 +266,7 @@ def serialize_person(person, sources_cache=None, include_details=True, relations
             'burial_location': person.burial_location,
             'burial_location_source': serialize_source(person.burial_location_source, sources_cache, include_private),
             'relationships': relationships_data,
+            'family_tree': person.get_family_tree_data(relationship_cache=relationship_cache),
             'tags': serialize_tags(person.tags),
             'attachments': serialize_attachments(person.attachments, include_private),
             'disputed_facts': serialize_disputed_facts(person.disputed_facts, sources_cache),

@@ -1193,6 +1193,8 @@
         const closeModalBtn = document.getElementById('close-modal');
         const modalPeopleContainer = document.getElementById('modal-people-container');
         const modalPeople = document.getElementById('modal-people');
+        const modalLocationContainer = document.getElementById('modal-location-container');
+        const modalLocation = document.getElementById('modal-location');
         const modalSourcesContainer = document.getElementById('modal-sources');
         const modalSourcesList = document.getElementById('modal-sources-list');
 
@@ -1571,8 +1573,6 @@
             }
         }
 
-        const modalLocationContainer = document.getElementById('modal-location-container');
-        const modalLocation = document.getElementById('modal-location');
         const modalTagsContainer = document.getElementById('modal-tags-container');
         const modalTags = document.getElementById('modal-tags');
         const modalTimelinesContainer = document.getElementById('modal-timelines-container');
@@ -1686,6 +1686,43 @@
         function findPersonById(id) {
             if (!window.globalPeopleDict) return null;
             return window.globalPeopleDict[id] || null;
+        }
+
+        function findPerson(item) {
+            if (!item) return null;
+            if (typeof item === 'object' && item !== null && item.id) {
+                // If it looks like a location already, don't force it to be a person
+                if (item.coordinates !== undefined || item.short_name) return null;
+                return (window.globalPeopleDict && window.globalPeopleDict[item.id]) || item;
+            }
+            if (typeof item === 'string') {
+                return (window.globalPeopleDict && Object.values(window.globalPeopleDict).find(p => p.name === item)) || null;
+            }
+            return item;
+        }
+
+        function findLocation(item) {
+            if (!item) return null;
+            if (typeof item === 'object' && item !== null && item.id) {
+                // If it looks like a person already, don't force it to be a location
+                if (item.birth_date !== undefined || item.death_date !== undefined) return null;
+                return (window.globalLocationsDict && window.globalLocationsDict[item.id]) || item;
+            }
+            if (typeof item === 'string') {
+                return (window.globalLocationsDict && Object.values(window.globalLocationsDict).find(l => (l.name === item || l.short_name === item))) || null;
+            }
+            return item;
+        }
+
+        function findEntityByAny(item) {
+            // General purpose: try finding as person, then location
+            const p = findPerson(item);
+            if (p && typeof p === 'object' && p !== null && (p.biography || p.birth_date)) return p;
+            
+            const l = findLocation(item);
+            if (l && typeof l === 'object' && l !== null && (l.description || l.coordinates)) return l;
+
+            return p || l || (typeof item === 'string' ? { id: item, name: item } : item);
         }
 
         function renderFamilyTree(person) {
@@ -2277,7 +2314,16 @@
             return `<span class="ml-1.5 inline-flex items-center text-red-600 cursor-help" title="${titleHtml}"><i class="fa-solid fa-triangle-exclamation"></i></span>`;
         }
 
-        function openEntityModal(entity) {
+        function openEntityModal(entityOrName) {
+            let entity = entityOrName;
+            
+            // Only perform a "blind" search if we were given a string (name) or a thin stub
+            if (typeof entityOrName === 'string' || (typeof entityOrName === 'object' && !entityOrName.description && !entityOrName.biography)) {
+                entity = findEntityByAny(entityOrName);
+            }
+            
+            if (!entity) return;
+
             // Unhide the modal immediately so vis.js timelines can calculate their dimensions.
             // DOM updates follow synchronously, so there is no visual flash.
             entityModal.classList.remove('hidden');
@@ -2749,6 +2795,29 @@
             }
         }
 
+        async function openLocationById(id) {
+            let cached = null;
+            if (window.globalLocationsDict) cached = window.globalLocationsDict[id];
+            if (cached) openEntityModal(cached);
+
+            try {
+                const resp = await fetch(`/api/locations/${id}/`);
+                if (!resp.ok) throw new Error('fetch failed');
+                const json = await resp.json();
+                const location = json.location;
+
+                if (json.sources) {
+                    json.sources.forEach(s => { globalSourcesMap[s.id] = s; });
+                }
+
+                if (window.globalLocationsDict) window.globalLocationsDict[id] = location;
+
+                openEntityModal(location);
+            } catch (e) {
+                console.warn('Could not refresh location data from server, using cached version.', e);
+            }
+        }
+
 
         function linkify(text) {
             if (!text) return '';
@@ -3012,15 +3081,25 @@
             }
 
             // Populate Location
-            if (item.location || item.end_location) {
+            if (item.location || item.location_name || item.end_location) {
                 modalLocation.innerHTML = '';
 
                 // Start Location
-                if (item.location && typeof item.location === 'object') {
+                const startLocData = item.location || item.location_name;
+                if (startLocData) {
+                    const startLoc = findLocation(startLocData);
+                    const startName = (typeof startLoc === 'object' && startLoc !== null) ? (startLoc.name || startLoc.short_name) : startLocData;
+                    
                     const locLink = document.createElement('button');
                     locLink.className = 'text-blue-600 hover:underline focus:outline-none text-left font-medium';
-                    locLink.textContent = item.location.name;
-                    locLink.onclick = () => openEntityModal(item.location);
+                    locLink.textContent = startName;
+                    locLink.onclick = () => {
+                        if (startLoc && startLoc.id) {
+                            openLocationById(startLoc.id);
+                        } else {
+                            openEntityModal(startLoc);
+                        }
+                    };
 
                     if (item.end_location) {
                         modalLocation.appendChild(document.createTextNode('From '));
@@ -3029,16 +3108,24 @@
                     if (item.location_source) {
                         modalLocation.insertAdjacentHTML('beforeend', renderCitation(item.location_source, eventSources, 'modal-sources'));
                     }
-                } else if (item.location) {
-                    modalLocation.appendChild(document.createTextNode(item.location));
                 }
 
                 // End Location
-                if (item.end_location && typeof item.end_location === 'object') {
+                if (item.end_location) {
+                    const endLocData = item.end_location;
+                    const endLoc = findLocation(endLocData);
+                    const endName = (typeof endLoc === 'object' && endLoc !== null) ? (endLoc.name || endLoc.short_name) : endLocData;
+                    
                     const endLocLink = document.createElement('button');
                     endLocLink.className = 'text-blue-600 hover:underline focus:outline-none text-left font-medium';
-                    endLocLink.textContent = item.end_location.name;
-                    endLocLink.onclick = () => openEntityModal(item.end_location);
+                    endLocLink.textContent = endName;
+                    endLocLink.onclick = () => {
+                        if (endLoc && endLoc.id) {
+                            openLocationById(endLoc.id);
+                        } else {
+                            openEntityModal(endLoc);
+                        }
+                    };
 
                     modalLocation.appendChild(document.createTextNode(' to '));
                     modalLocation.appendChild(endLocLink);
@@ -3096,21 +3183,21 @@
             modalPeople.innerHTML = '';
             if (item.people && item.people.length > 0) {
                 item.people.forEach(p => {
-                    // p is now just {id, name}
-                    if (typeof p === 'object' && p !== null) {
-                        const badge = document.createElement('button');
-                        badge.className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800 focus:outline-none transition-colors';
-                        badge.textContent = p.name;
-                        badge.onclick = () => openPersonById(p.id);
+                    const person = findPerson(p);
+                    const name = (typeof p === 'object' && p !== null) ? p.name : p;
 
-                        modalPeople.appendChild(badge);
-                    } else {
-                        // Fallback/old string format
-                        const badge = document.createElement('span');
-                        badge.className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300';
-                        badge.textContent = p;
-                        modalPeople.appendChild(badge);
-                    }
+                    const badge = document.createElement('button');
+                    badge.className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800 focus:outline-none transition-colors';
+                    badge.textContent = name;
+                    badge.onclick = () => {
+                        if (person && person.id) {
+                            openPersonById(person.id);
+                        } else {
+                            openEntityModal(person);
+                        }
+                    };
+
+                    modalPeople.appendChild(badge);
                 });
                 modalPeopleContainer.classList.remove('hidden');
             } else {
@@ -3565,15 +3652,20 @@
                         else if (item.status === 'estimate') styleStr = 'background-color: #f3f4f6; border-color: #e5e7eb; color: #1f2937;';
                         else if (item.status === 'disputed') styleStr = 'background-color: #fee2e2; border-color: #fecaca; color: #991b1b;';
 
+                        // Support both 'location' and 'location_name' from the API
+                        const displayLoc = item.location_name || (item.location && typeof item.location === 'object' ? item.location.name : item.location);
+                        const displayContent = item.content;
+
                         const baseItem = {
                             id: item.id,
                             originalId: item.id,
-                            content: item.content,
+                            content: displayContent,
                             start: item.start,
                             end: item.end || undefined,
                             title: item.title,
                             type: item.end ? 'range' : 'point',
-                            location: item.location,
+                            location_name: displayLoc,
+                            location: item.location || { name: displayLoc },
                             timelines: item.timelines,
                             people: item.people,
                             tags: item.tags,
@@ -3590,7 +3682,7 @@
                             cloned_from: item.cloned_from,
                             start_source: item.start_source,
                             end_source: item.end_source,
-                            stories: item.stories, // ADD THIS
+                            stories: item.stories, 
                             className: item.status ? 'status-' + item.status : '',
                             style: styleStr
                         };
@@ -3598,8 +3690,8 @@
                         if (groupBy === 'none') {
                             formattedData.push(baseItem);
                         } else if (groupBy === 'location') {
-                            const locName = item.location ? (item.location.name || item.location) : 'No Location';
-                            const locId = item.location ? (item.location.id || locName) : 'no-location';
+                            const locName = displayLoc || 'No Location';
+                            const locId = (item.location && typeof item.location === 'object' && item.location !== null && item.location.id) || locName;
 
                             if (!groupsSet.has(locId)) {
                                 groupsSet.add(locId);
@@ -3673,10 +3765,11 @@
                     if (groupBy === 'person' && showLifespans) {
                         const personLifespans = new Map();
                         events.forEach(item => {
-                            if (item.people) {
+                            if (item.people && Array.isArray(item.people)) {
                                 item.people.forEach(p => {
-                                    const pId = typeof p === 'object' ? p.id : p;
-                                    const pName = typeof p === 'object' ? p.name : p;
+                                    if (!p) return;
+                                    const pId = (typeof p === 'object' && p !== null) ? p.id : p;
+                                    const pName = (typeof p === 'object' && p !== null) ? p.name : p;
                                     const fullPerson = findPersonById(pId);
                                     const birth = fullPerson ? fullPerson.birth_date : null;
                                     const death = fullPerson ? fullPerson.death_date : null;
@@ -3966,21 +4059,9 @@
                 const peopleList = item.people || [];
                 if (Array.isArray(peopleList)) {
                     peopleList.forEach(p => {
-                        // In this app, item.people is often just a list of names (strings)
-                        const personId = typeof p === 'object' ? p.id : p;
-                        if (personId && !uniquePeople.has(personId)) {
-                            // Try re-hydration from global dictionary (keyed by ID or Name)
-                            let personObj = (window.globalPeopleDict && window.globalPeopleDict[personId]) ? window.globalPeopleDict[personId] : p;
-                            
-                            if (personObj && typeof personObj === 'object' && personObj.name) {
-                                uniquePeople.set(personId, personObj);
-                            } else {
-                                // Fallback: Create a minimal object for the card UI
-                                uniquePeople.set(personId, { 
-                                    id: personId, 
-                                    name: typeof p === 'object' ? (p.name || personId) : p 
-                                });
-                            }
+                        const person = findPerson(p);
+                        if (person && !uniquePeople.has(person.id)) {
+                            uniquePeople.set(person.id, person);
                         }
                     });
                 }
@@ -4019,8 +4100,12 @@
                 `;
 
                 card.addEventListener('click', () => {
-                    const fullPerson = window.globalPeopleDict[person.id] || person;
-                    openEntityModal(fullPerson);
+                    const fullPerson = findPerson(person);
+                    if (fullPerson && fullPerson.id) {
+                        openPersonById(fullPerson.id);
+                    } else {
+                        openEntityModal(fullPerson);
+                    }
                 });
 
                 container.appendChild(card);
@@ -4037,26 +4122,25 @@
             const uniqueLocations = new Map();
 
             sourceData.forEach(item => {
-                // The serializer uses 'location_name' for the primary event location
-                const locData = item.location || item.location_name;
-                if (locData) {
-                    const locId = typeof locData === 'object' ? locData.id : locData;
+                // Scan both start and end locations for the dashboard
+                const locsToScan = [item.location, item.location_name, item.end_location].filter(Boolean);
+                
+                locsToScan.forEach(locData => {
+                    const locObj = findLocation(locData);
+                    const locId = typeof locObj === 'object' ? locObj.id : locObj;
+                    
                     if (locId && !uniqueLocations.has(locId)) {
-                        // Re-hydrate from global dict
-                        let locObj = (window.globalLocationsDict && window.globalLocationsDict[locId]) ? window.globalLocationsDict[locId] : locData;
-                        
-                        if (locObj && typeof locObj === 'object' && (locObj.name || locObj.short_name)) {
+                        if (typeof locObj === 'object' && (locObj.name || locObj.short_name)) {
                             uniqueLocations.set(locId, locObj);
                         } else {
-                            // Fallback minimal object
                             uniqueLocations.set(locId, { 
                                 id: locId, 
-                                name: typeof locData === 'object' ? (locData.name || locId) : locData,
-                                short_name: typeof locData === 'object' ? (locData.short_name || locData.name || locId) : locData 
+                                name: locObj,
+                                short_name: locObj
                             });
                         }
                     }
-                }
+                });
             });
 
             const locationList = Array.from(uniqueLocations.values());
@@ -4098,8 +4182,12 @@
                 `;
 
                 card.addEventListener('click', () => {
-                    const fullLocation = window.globalLocationsDict[location.id] || location;
-                    openEntityModal(fullLocation);
+                    const fullLocation = findLocation(location);
+                    if (fullLocation && fullLocation.id) {
+                        openLocationById(fullLocation.id);
+                    } else {
+                        openEntityModal(fullLocation);
+                    }
                 });
 
                 container.appendChild(card);
@@ -4653,18 +4741,10 @@
         if (mobileSearch) {
             mobileSearch.addEventListener('input', (e) => {
                 const searchField = document.getElementById('search-filter');
-                searchField.value = e.target.value;
-                searchField.dispatchEvent(new Event('input', { bubbles: true }));
-            });
-        }
-
-        // Accordion Toggles
-        const tlToggle = document.getElementById('mobile-timelines-toggle');
-        const tlList = document.getElementById('mobile-timelines-list');
-        if (tlToggle && tlList) {
-            tlToggle.addEventListener('click', () => {
-                tlList.classList.toggle('hidden');
-                tlToggle.querySelector('i.fa-chevron-down').classList.toggle('rotate-180');
+                if (searchField) {
+                    searchField.value = e.target.value;
+                    searchField.dispatchEvent(new Event('input', { bubbles: true }));
+                }
             });
         }
 
@@ -4680,55 +4760,80 @@
         // Checklist Refresh Trigger (Sidebar checkboxes)
         document.querySelectorAll('#unified-sidebar .timeline-checkbox, #unified-sidebar .story-checkbox').forEach(cb => {
             cb.addEventListener('change', () => {
-                // Trigger the main update logic (usually fires on any .timeline-checkbox change)
-                // We dispatch a generic change event that the main app listens for
                 window.dispatchEvent(new CustomEvent('timeline-scope-changed'));
-                
-                // If the app uses direct listeners on classes:
                 cb.dispatchEvent(new Event('change', { bubbles: true }));
             });
         });
 
         // Curated View Triggers
-        document.getElementById('mobile-read-btn').addEventListener('click', () => {
-             document.getElementById('view-toggle-btn').click();
-             toggleSidebar(false);
+        const mobRead = document.getElementById('mobile-read-btn');
+        if (mobRead) mobRead.addEventListener('click', () => {
+             const btn = document.getElementById('view-toggle-btn');
+             if (btn) btn.click();
+             if (typeof toggleSidebar === 'function') toggleSidebar(false);
         });
-        document.getElementById('mobile-people-btn').addEventListener('click', () => {
-             document.getElementById('people-toggle-btn').click();
-             toggleSidebar(false);
+
+        const mobPeople = document.getElementById('mobile-people-btn');
+        if (mobPeople) mobPeople.addEventListener('click', () => {
+             const btn = document.getElementById('people-toggle-btn');
+             if (btn) btn.click();
+             if (typeof toggleSidebar === 'function') toggleSidebar(false);
         });
-        document.getElementById('mobile-places-btn').addEventListener('click', () => {
-             document.getElementById('location-toggle-btn').click();
-             toggleSidebar(false);
+
+        const mobPlaces = document.getElementById('mobile-places-btn');
+        if (mobPlaces) mobPlaces.addEventListener('click', () => {
+             const btn = document.getElementById('location-toggle-btn');
+             if (btn) btn.click();
+             if (typeof toggleSidebar === 'function') toggleSidebar(false);
         });
 
         // Zoom & Fit
-        document.getElementById('mobile-zoom-in').addEventListener('click', () => document.getElementById('zoom-in-btn').click());
-        document.getElementById('mobile-zoom-out').addEventListener('click', () => document.getElementById('zoom-out-btn').click());
-        document.getElementById('mobile-fit-all').addEventListener('click', () => {
-            document.getElementById('fit-btn').click();
-            toggleSidebar(false);
+        const mobZoomIn = document.getElementById('mobile-zoom-in');
+        if (mobZoomIn) mobZoomIn.addEventListener('click', () => {
+            const btn = document.getElementById('zoom-in-btn');
+            if (btn) btn.click();
+        });
+
+        const mobZoomOut = document.getElementById('mobile-zoom-out');
+        if (mobZoomOut) mobZoomOut.addEventListener('click', () => {
+            const btn = document.getElementById('zoom-out-btn');
+            if (btn) btn.click();
+        });
+
+        const mobFitAll = document.getElementById('mobile-fit-all');
+        if (mobFitAll) mobFitAll.addEventListener('click', () => {
+            const btn = document.getElementById('fit-btn');
+            if (btn) btn.click();
+            if (typeof toggleSidebar === 'function') toggleSidebar(false);
         });
 
         // Exports
-        document.getElementById('mobile-export-pdf').addEventListener('click', () => {
-            document.getElementById('export-pdf-btn').click();
-            toggleSidebar(false);
+        const mobExpPdf = document.getElementById('mobile-export-pdf');
+        if (mobExpPdf) mobExpPdf.addEventListener('click', () => {
+            const btn = document.getElementById('export-pdf-btn');
+            if (btn) btn.click();
+            if (typeof toggleSidebar === 'function') toggleSidebar(false);
         });
-        document.getElementById('mobile-export-json').addEventListener('click', () => {
-            document.getElementById('export-json-btn').click();
-            toggleSidebar(false);
-        });
-        document.getElementById('mobile-export-pdf').addEventListener('click', () => document.getElementById('export-pdf-btn').click());
-        document.getElementById('mobile-export-json').addEventListener('click', () => document.getElementById('export-json-btn').click());
 
-        document.getElementById('mobile-timelines-btn').addEventListener('click', () => {
-            document.querySelector('#timelines-dropdown-container button').click();
+        const mobExpJson = document.getElementById('mobile-export-json');
+        if (mobExpJson) mobExpJson.addEventListener('click', () => {
+            const btn = document.getElementById('export-json-btn');
+            if (btn) btn.click();
+            if (typeof toggleSidebar === 'function') toggleSidebar(false);
         });
-        document.getElementById('mobile-stories-btn').addEventListener('click', () => {
-            document.querySelector('#stories-dropdown-container button').click();
+
+        const mobTlBtn = document.getElementById('mobile-timelines-btn');
+        if (mobTlBtn) mobTlBtn.addEventListener('click', () => {
+            const btn = document.querySelector('#timelines-dropdown-container button');
+            if (btn) btn.click();
         });
+
+        const mobStoryBtn = document.getElementById('mobile-stories-btn');
+        if (mobStoryBtn) mobStoryBtn.addEventListener('click', () => {
+            const btn = document.querySelector('#stories-dropdown-container button');
+            if (btn) btn.click();
+        });
+
 
         // Landscape Tip Logic
         const landscapeTip = document.getElementById('landscape-tip');
