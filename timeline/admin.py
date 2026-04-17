@@ -138,6 +138,26 @@ class OwnedAdmin(admin.ModelAdmin):
                 return False
         return super().has_delete_permission(request, obj)
 
+class SuperuserOnlyMixin:
+    """
+    Restrict admin access to superusers only.
+    Standard staff or 'Researchers' will not have view/add/change/delete permissions.
+    """
+    def has_module_permission(self, request):
+        return request.user.is_superuser
+
+    def has_view_permission(self, request, obj=None):
+        return request.user.is_superuser
+
+    def has_add_permission(self, request):
+        return request.user.is_superuser
+
+    def has_change_permission(self, request, obj=None):
+        return request.user.is_superuser
+
+    def has_delete_permission(self, request, obj=None):
+        return request.user.is_superuser
+
     @admin.display(description='Copy')
     def clone_link(self, obj):
         from django.utils.html import format_html
@@ -509,7 +529,7 @@ class ResearchQuestionAdmin(OwnedAdmin):
 
 
 @admin.register(HelpCategory)
-class HelpCategoryAdmin(admin.ModelAdmin):
+class HelpCategoryAdmin(SuperuserOnlyMixin, admin.ModelAdmin):
     list_display = ('name', 'order')
     list_editable = ('order',)
 
@@ -518,7 +538,7 @@ class HelpImageInline(admin.TabularInline):
     extra = 1
 
 @admin.register(HelpTopic)
-class HelpTopicAdmin(admin.ModelAdmin):
+class HelpTopicAdmin(SuperuserOnlyMixin, admin.ModelAdmin):
     list_display = ('title', 'category', 'order', 'is_published')
     list_filter = ('category', 'is_published')
     list_editable = ('order', 'is_published')
