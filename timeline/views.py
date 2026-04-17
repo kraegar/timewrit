@@ -54,7 +54,7 @@ def person_detail_json(request, person_id):
     if person.is_private and not request.user.is_authenticated:
         return JsonResponse({'error': 'Private person'}, status=403)
     sources_cache = {}
-    data = serialize_person(person, sources_cache=sources_cache, request_user=request.user)
+    data = serialize_person(person, sources_cache=sources_cache, request_user=request.user, include_family_tree=True)
     return JsonResponse({'person': data, 'sources': list(sources_cache.values())})
 
 def location_detail_json(request, location_id):
@@ -357,16 +357,15 @@ def events_json(request):
     # so they are clickable and fully interactive in the UI.
     additional_ids = set()
     for p_id, p_data in list(all_people.items()):
-        # Check relationships
+        # Check relationships — ensure related people are included in the dict
+        # so they are clickable and fully interactive in the UI.
         if 'relationships' in p_data:
             for rel in p_data['relationships']:
                 if rel['to_person_id'] not in all_people:
                     additional_ids.add(rel['to_person_id'])
-        # Check family tree nodes
-        if 'family_tree' in p_data and p_data['family_tree']:
-            for node in p_data['family_tree']['nodes']:
-                if node['id'] not in all_people:
-                    additional_ids.add(node['id'])
+        # NOTE: family_tree node expansion is intentionally omitted here.
+        # Family tree data is fetched on-demand via /api/people/<id>/ when
+        # the user opens a person modal, keeping bulk load fast.
 
     if additional_ids:
         # Bulk load and serialize these additional people (relatives without direct events).

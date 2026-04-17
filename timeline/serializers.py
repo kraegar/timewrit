@@ -212,9 +212,12 @@ def serialize_location(location, sources_cache=None, event_date=None, request_us
 
     return data
 
-def serialize_person(person, sources_cache=None, include_details=True, relationship_cache=None, request_user=None, include_private=False):
+def serialize_person(person, sources_cache=None, include_details=True, relationship_cache=None, request_user=None, include_private=False, include_family_tree=False):
     """
     Serializes a Person. Supports Full Archive parity.
+    Pass include_family_tree=True only when a full person detail is needed
+    (e.g. person_detail_json). Avoid during bulk event loading — it runs
+    expensive graph traversal queries per person.
     """
     if not person:
         return None
@@ -266,7 +269,7 @@ def serialize_person(person, sources_cache=None, include_details=True, relations
             'burial_location': person.burial_location,
             'burial_location_source': serialize_source(person.burial_location_source, sources_cache, include_private),
             'relationships': relationships_data,
-            'family_tree': person.get_family_tree_data(relationship_cache=relationship_cache),
+            'family_tree': person.get_family_tree_data(relationship_cache=relationship_cache) if include_family_tree else None,
             'tags': serialize_tags(person.tags),
             'attachments': serialize_attachments(person.attachments, include_private),
             'disputed_facts': serialize_disputed_facts(person.disputed_facts, sources_cache),
