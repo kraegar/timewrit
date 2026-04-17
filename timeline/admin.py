@@ -138,32 +138,10 @@ class OwnedAdmin(admin.ModelAdmin):
                 return False
         return super().has_delete_permission(request, obj)
 
-class SuperuserOnlyMixin:
-    """
-    Restrict admin access to superusers only.
-    Standard staff or 'Researchers' will not have view/add/change/delete permissions.
-    """
-    def has_module_permission(self, request):
-        return request.user.is_superuser
-
-    def has_view_permission(self, request, obj=None):
-        return request.user.is_superuser
-
-    def has_add_permission(self, request):
-        return request.user.is_superuser
-
-    def has_change_permission(self, request, obj=None):
-        return request.user.is_superuser
-
-    def has_delete_permission(self, request, obj=None):
-        return request.user.is_superuser
-
     @admin.display(description='Copy')
     def clone_link(self, obj):
         from django.utils.html import format_html
         from django.urls import reverse
-        # We'll use JS to hide this if it belongs to the current user
-        # We tag it with the owner ID/name for easy identification
         owner_name = obj.owner.username if obj.owner else "none"
         return format_html('<a class="button clone-btn-list" data-owner="{}" href="{}?clone_from={}" style="background-color: #2563EB; color: white; padding: 2px 8px; border-radius: 4px; font-size: 10px;">Quick Copy</a>', 
                            owner_name, reverse(f'admin:timeline_{obj._meta.model_name}_add'), obj.pk)
@@ -205,6 +183,26 @@ class SuperuserOnlyMixin:
             
             count += 1
         self.message_user(request, f"Successfully copied {count} items to your collection.")
+
+class SuperuserOnlyMixin:
+    """
+    Restrict admin access to superusers only.
+    Standard staff or 'Researchers' will not have view/add/change/delete permissions.
+    """
+    def has_module_permission(self, request):
+        return request.user.is_superuser
+
+    def has_view_permission(self, request, obj=None):
+        return request.user.is_superuser
+
+    def has_add_permission(self, request):
+        return request.user.is_superuser
+
+    def has_change_permission(self, request, obj=None):
+        return request.user.is_superuser
+
+    def has_delete_permission(self, request, obj=None):
+        return request.user.is_superuser
 
 @admin.register(Source)
 class SourceAdmin(OwnedAdmin):
