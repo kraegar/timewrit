@@ -36,7 +36,8 @@ gcloud services enable \
     secretmanager.googleapis.com \
     cloudbuild.googleapis.com \
     artifactregistry.googleapis.com \
-    storage.googleapis.com
+    storage.googleapis.com \
+    iam.googleapis.com
 
 # 4. Create Service Account (The Deployer)
 gcloud iam service-accounts create timewrit-deployer \
@@ -59,6 +60,7 @@ openssl rand -base64 32
 gcloud secrets create DATABASE_URL --replication-policy="automatic"
 gcloud secrets create SECRET_KEY --replication-policy="automatic"
 gcloud secrets create ALLOWED_HOSTS --replication-policy="automatic"
+gcloud secrets create DJ_SUPERUSER_PASSWORD --replication-policy="automatic"
 
 # Storage & Auth Secrets
 gcloud secrets create GS_BUCKET_NAME --replication-policy="automatic"
@@ -79,6 +81,7 @@ printf "postgres://django:[PASSWORD]@/timewrit_prod?host=/cloudsql/[PROJECT_ID]:
 ### Grant Permissions to Service Account
 ```bash
 # Grant Secret Accessor role to your deployer account
+# NOTE: Only 'roles/secretmanager.secretAccessor' is required; 'viewer' is over-provisioned.
 gcloud projects add-iam-policy-binding [PROJECT_ID] \
     --member="serviceAccount:timewrit-deployer@[PROJECT_ID].iam.gserviceaccount.com" \
     --role="roles/secretmanager.secretAccessor"
@@ -92,11 +95,11 @@ gcloud projects add-iam-policy-binding [PROJECT_ID] \
 ```bash
 # Create Postgres Instance
 gcloud sql instances create timewrit-db \
-    --database-version=POSTGRES_15 --tier=db-f1-micro --region=us-east1
+    --database-version=POSTGRES_15 --tier=db-g1-small --region=us-east1
 
-# Create Database & Set Password
+# Create Database & Dedicated User
 gcloud sql databases create timewrit_prod --instance=timewrit-db
-gcloud sql users set-password postgres --instance=timewrit-db --password=[DB_PASSWORD]
+gcloud sql users create django --instance=timewrit-db --password=[DB_PASSWORD]
 
 # Grant SQL Client Role
 gcloud projects add-iam-policy-binding [PROJECT_ID] \
@@ -118,14 +121,9 @@ gcloud storage buckets add-iam-policy-binding gs://[YOUR_UNIQUE_BUCKET_NAME] \
     --member="serviceAccount:timewrit-deployer@[PROJECT_ID].iam.gserviceaccount.com" \
     --role="roles/storage.objectAdmin"
 
-# Grant Service Account Token Creator at the PROJECT level
-# (required so the running service can call the IAM signBlob API)
-gcloud projects add-iam-policy-binding [PROJECT_ID] \
-    --member="serviceAccount:timewrit-deployer@[PROJECT_ID].iam.gserviceaccount.com" \
-    --role="roles/iam.serviceAccountTokenCreator"
-
-# CRITICAL: Also grant Token Creator on the service account resource ITSELF.
-# Without this self-impersonation grant, Cloud Run cannot sign GCS URLs.
+# CRITICAL: Grant Token Creator on the service account resource ITSELF.
+# This allows the app to self-impersonate for GCS Signed URLs without
+# needing broad project-level impersonation permissions.
 gcloud iam service-accounts add-iam-policy-binding \
     timewrit-deployer@[PROJECT_ID].iam.gserviceaccount.com \
     --member="serviceAccount:timewrit-deployer@[PROJECT_ID].iam.gserviceaccount.com" \
@@ -145,6 +143,11 @@ gcloud artifacts repositories create timewrit-repo \
 gcloud builds submit --tag us-east1-docker.pkg.dev/[PROJECT_ID]/timewrit-repo/timewrit-app .
 
 # 3. Deploy to Cloud Run
+> [!WARNING]
+> The `--allow-unauthenticated` flag makes your application globally accessible on the internet. 
+> This is required for a public web app, but ensure that Django's internal `LOGIN_REQUIRED` 
+> decorators and `OwnedAdmin` logic are correctly configured to gate access to sensitive data.
+
 gcloud run deploy timewrit-app \
     --image us-east1-docker.pkg.dev/[PROJECT_ID]/timewrit-repo/timewrit-app \
     --region us-east1 \
@@ -179,8 +182,9 @@ gcloud run jobs create timewrit-create-admin \
     --region us-east1 \
     --service-account timewrit-deployer@[PROJECT_ID].iam.gserviceaccount.com \
     --command=python \
-    --args=manage.py,shell,-c,"from django.contrib.auth import get_user_model; User=get_user_model(); User.objects.filter(username='admin').exists() or User.objects.create_superuser('admin', 'admin@your-domain.com', '[PASSWORD]')" \
+    --args=manage.py,shell,-c,"import os; from django.contrib.auth import get_user_model; User=get_user_model(); User.objects.filter(username='admin').exists() or User.objects.create_superuser('admin', 'admin@your-domain.com', os.environ.get('DJ_SUPERUSER_PASSWORD'))" \
     --set-env-vars="USE_SECRET_MANAGER=True,GCP_PROJECT_ID=[PROJECT_ID]" \
+    --set-secrets="DJ_SUPERUSER_PASSWORD=DJ_SUPERUSER_PASSWORD:latest" \
     --add-cloudsql-instances [PROJECT_ID]:us-east1:timewrit-db
 
 gcloud run jobs execute timewrit-create-admin --region us-east1
@@ -238,8 +242,7 @@ On Cloud Run, the `google-cloud-storage` library cannot sign URLs automatically 
 | Role | Granted On | Why |
 |---|---|---|
 | `roles/storage.objectAdmin` | The GCS Bucket | Allows the app to upload and manage files |
-| `roles/iam.serviceAccountTokenCreator` | The Project | Allows the account to call the IAM `signBlob` API |
-| `roles/iam.serviceAccountTokenCreator` | The Service Account **itself** | Allows self-impersonation — **this is the critical one most guides miss** |
+| `roles/iam.serviceAccountTokenCreator` | The Service Account **itself** | Allows self-impersonation — **this is the only identity grant actually needed** |
 
 ### Symptom Diagnosis
 
@@ -268,4 +271,7 @@ gcloud storage buckets get-iam-policy gs://[YOUR_UNIQUE_BUCKET_NAME] --format="j
 ```
 
 ### CORS (Only Needed for Direct Browser Fetch Requests)
-CORS is **not** required for the Django Admin image display or modal images — those render via server-side signed URL generation. CORS only becomes relevant if frontend JavaScript makes a direct `fetch()` or `XMLHttpRequest` call to a GCS URL (e.g., a PDF export that loads images client-side).
+### Secret Manager Hardening
+By default, some guides suggest granting `roles/secretmanager.viewer`. **This is over-provisioned.** 
+- `roles/secretmanager.secretAccessor` is the only role required to read the payload of secrets.
+- `roles/secretmanager.viewer` allows the account to browse the list of secret names in the project, which is an unnecessary information disclosure for an application service account.
