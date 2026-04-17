@@ -98,15 +98,129 @@
 </style>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" rel="stylesheet"
     type="text/css" />
+<style>
+    /* Orientation Suggestion Modal */
+    #landscape-tip {
+        display: none;
+    }
+    @media (max-width: 1024px) and (orientation: portrait) {
+        #landscape-tip {
+            display: flex;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block sidebar_controls %}
+<div class="p-4 space-y-8">
+    <!-- 1. Search -->
+    <div class="space-y-3">
+        <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Search & Locate</h4>
+        <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <i class="fa-solid fa-magnifying-glass text-gray-400 text-xs"></i>
+            </div>
+            <input type="text" id="mobile-search-filter" 
+                class="block w-full pl-9 pr-3 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900 text-sm focus:ring-2 focus:ring-blue-500 transition-all" 
+                placeholder="Search people, events...">
+        </div>
+    </div>
+
+    <!-- 2. Scope (Direct Accordion Integration) -->
+    <div class="space-y-3">
+        <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Active Scope</h4>
+        
+        <!-- Timelines Accordion -->
+        <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+            <button id="mobile-timelines-toggle" class="w-full flex items-center justify-between bg-gray-100 dark:bg-gray-700 p-3 text-xs font-bold text-gray-700 dark:text-gray-200">
+                <span class="flex items-center gap-2"><i class="fa-solid fa-layer-group text-blue-600"></i> Timelines</span>
+                <i class="fa-solid fa-chevron-down opacity-50"></i>
+            </button>
+            <div id="mobile-timelines-list" class="hidden bg-white dark:bg-gray-800 p-2 max-h-48 overflow-y-auto space-y-1">
+                {% for tl in timelines %}
+                <label class="flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded transition-colors cursor-pointer">
+                    <input type="checkbox" value="{{ tl.id }}" class="timeline-checkbox w-5 h-5 text-blue-600 border-gray-300 dark:border-gray-600 rounded" {% if tl.is_default %}checked{% endif %}>
+                    <span class="text-xs text-gray-700 dark:text-gray-300 truncate">
+                        <span class="font-bold text-blue-600">[{{ tl.owner.username|default:"Public" }}]</span> {{ tl.name }}
+                    </span>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Stories Accordion -->
+        <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+            <button id="mobile-stories-toggle" class="w-full flex items-center justify-between bg-gray-100 dark:bg-gray-700 p-3 text-xs font-bold text-gray-700 dark:text-gray-200">
+                <span class="flex items-center gap-2"><i class="fa-solid fa-book text-emerald-600"></i> Stories</span>
+                <i class="fa-solid fa-chevron-down opacity-50"></i>
+            </button>
+            <div id="mobile-stories-list" class="hidden bg-white dark:bg-gray-800 p-2 max-h-48 overflow-y-auto space-y-1">
+                {% for story in stories %}
+                <label class="flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded transition-colors cursor-pointer">
+                    <input type="checkbox" value="{{ story.id }}" class="story-checkbox w-5 h-5 text-emerald-600 border-gray-300 dark:border-gray-600 rounded">
+                    <span class="text-xs text-gray-700 dark:text-gray-300 truncate">{{ story.title }}</span>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Views -->
+    <div class="space-y-3">
+        <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Visualization Views</h4>
+        <div class="grid grid-cols-2 gap-2">
+            <button id="mobile-read-btn" class="flex items-center gap-3 bg-gray-100 dark:bg-gray-700 p-3 rounded-lg text-xs font-bold">
+                <i class="fa-solid fa-book-open text-blue-800 dark:text-blue-300 w-5"></i><span>Narrative</span>
+            </button>
+            <button id="mobile-people-btn" class="flex items-center gap-3 bg-gray-100 dark:bg-gray-700 p-3 rounded-lg text-xs font-bold">
+                <i class="fa-solid fa-users text-indigo-600 w-5"></i><span>People</span>
+            </button>
+            <button id="mobile-places-btn" class="flex items-center gap-3 bg-gray-100 dark:bg-gray-700 p-3 rounded-lg text-xs font-bold">
+                <i class="fa-solid fa-earth-americas text-emerald-600 w-5"></i><span>Locations</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- 4. Zoom & Fit -->
+    <div class="space-y-3">
+        <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Timeline Zoom</h4>
+        <div class="flex gap-2">
+            <button id="mobile-zoom-out" class="flex-1 bg-gray-100 dark:bg-gray-700 py-3 rounded-lg"><i class="fa-solid fa-minus"></i></button>
+            <button id="mobile-fit-all" class="flex-[2] bg-blue-600 text-white font-bold text-xs rounded-lg uppercase tracking-widest shadow-md">Fit All</button>
+            <button id="mobile-zoom-in" class="flex-1 bg-gray-100 dark:bg-gray-700 py-3 rounded-lg"><i class="fa-solid fa-plus"></i></button>
+        </div>
+    </div>
+
+    <!-- 5. Export -->
+    <div class="space-y-3 pb-8">
+        <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Export Archive</h4>
+        <div class="grid grid-cols-2 gap-2">
+            <button id="mobile-export-pdf" class="flex items-center justify-center gap-2 bg-indigo-600 text-white p-3 rounded-lg text-[10px] font-bold uppercase transition-transform active:scale-95">
+                <i class="fa-solid fa-file-pdf"></i> PDF
+            </button>
+            <button id="mobile-export-json" class="flex items-center justify-center gap-2 bg-indigo-600 text-white p-3 rounded-lg text-[10px] font-bold uppercase transition-transform active:scale-95">
+                <i class="fa-solid fa-file-code"></i> JSON
+            </button>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block content %}
+<!-- Landscape Orientation Tip -->
+<div id="landscape-tip" class="fixed inset-0 z-[110] bg-blue-600 bg-opacity-95 flex-col items-center justify-center text-white p-8 text-center hidden">
+    <i class="fa-solid fa-rotate text-6xl mb-6 animate-pulse"></i>
+    <h2 class="text-2xl font-bold mb-2">Best in Landscape</h2>
+    <p class="mb-8 opacity-90 max-w-xs">This timeline was designed for horizontal space. Rotate your device for a 4th dimensional experience.</p>
+    <button id="dismiss-landscape-tip" class="bg-white text-blue-600 px-6 py-2 rounded-full font-bold shadow-lg">Proceed Anyway</button>
+</div>
+
 <!-- Controls / Filters -->
 <!-- Primary Action Bar -->
 <div
-    class="bg-white dark:bg-gray-800 px-3 py-2 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 flex flex-wrap xl:flex-nowrap gap-2 items-center justify-between">
-    <!-- Left: Timelines & Search (Step 1 Scoping) -->
-    <div class="flex flex-wrap md:flex-nowrap flex-grow items-center gap-2 min-w-0">
+    class="sm:flex hidden bg-white dark:bg-gray-800 px-3 py-2.5 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 flex flex-wrap 2xl:flex-nowrap gap-3 items-center justify-start 2xl:justify-between transition-all duration-300 mobile-hide">
+    <!-- Left: Selectors & Search -->
+    <div class="flex flex-wrap 2xl:flex-nowrap items-center gap-3 min-w-0">
         <div class="flex items-center gap-1.5 flex-shrink-0">
             <!-- Timeline Scope Dropdown -->
             <div class="relative group z-10" id="timelines-dropdown-container">
@@ -227,7 +341,7 @@
     </div>
 
     <!-- Right: View & Action Controls -->
-    <div class="flex flex-wrap items-center gap-2 flex-shrink-0">
+    <div class="flex flex-wrap 2xl:flex-nowrap items-center gap-3">
         <div class="flex items-center gap-1.5 border-r border-gray-200 dark:border-gray-700 pr-2">
             <select id="style-filter"
                 class="form-select bg-gray-50 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-600 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-xs rounded-md py-1 pl-2 pr-6 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer">
@@ -510,7 +624,7 @@
 <!-- Timeline Container -->
 <!-- Force fixed height to ensure Vis.js has space to render -->
 <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden relative transition-all"
-    id="timeline-wrapper" style="height: 600px; min-height: 600px;">
+    id="timeline-wrapper" style="min-height: 400px;" class="h-[500px] md:h-[600px]">
     <div id="visualization" style="width: 100%; height: 100%;"></div>
     <div id="loading" class="absolute inset-0 flex items-center justify-center bg-white dark:bg-gray-800 bg-opacity-75 z-10 hidden">
         <i class="fa-solid fa-spinner fa-spin text-3xl text-blue-500"></i>
@@ -4502,6 +4616,98 @@
             });
 
             readingContent.innerHTML = html;
+        }
+
+        // Connect unified sidebar elements to main logic
+        const mobileSearch = document.getElementById('mobile-search-filter');
+        if (mobileSearch) {
+            mobileSearch.addEventListener('input', (e) => {
+                const searchField = document.getElementById('search-filter');
+                searchField.value = e.target.value;
+                searchField.dispatchEvent(new Event('input', { bubbles: true }));
+            });
+        }
+
+        // Accordion Toggles
+        const tlToggle = document.getElementById('mobile-timelines-toggle');
+        const tlList = document.getElementById('mobile-timelines-list');
+        if (tlToggle && tlList) {
+            tlToggle.addEventListener('click', () => {
+                tlList.classList.toggle('hidden');
+                tlToggle.querySelector('i.fa-chevron-down').classList.toggle('rotate-180');
+            });
+        }
+
+        const storyToggle = document.getElementById('mobile-stories-toggle');
+        const storyList = document.getElementById('mobile-stories-list');
+        if (storyToggle && storyList) {
+            storyToggle.addEventListener('click', () => {
+                storyList.classList.toggle('hidden');
+                storyToggle.querySelector('i.fa-chevron-down').classList.toggle('rotate-180');
+            });
+        }
+
+        // Checklist Refresh Trigger (Sidebar checkboxes)
+        document.querySelectorAll('#unified-sidebar .timeline-checkbox, #unified-sidebar .story-checkbox').forEach(cb => {
+            cb.addEventListener('change', () => {
+                // Trigger the main update logic (usually fires on any .timeline-checkbox change)
+                // We dispatch a generic change event that the main app listens for
+                window.dispatchEvent(new CustomEvent('timeline-scope-changed'));
+                
+                // If the app uses direct listeners on classes:
+                cb.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+        });
+
+        // Curated View Triggers
+        document.getElementById('mobile-read-btn').addEventListener('click', () => {
+             document.getElementById('view-toggle-btn').click();
+             toggleSidebar(false);
+        });
+        document.getElementById('mobile-people-btn').addEventListener('click', () => {
+             document.getElementById('show-people-dashboard').click();
+             toggleSidebar(false);
+        });
+        document.getElementById('mobile-places-btn').addEventListener('click', () => {
+             document.getElementById('show-locations-dashboard').click();
+             toggleSidebar(false);
+        });
+
+        // Zoom & Fit
+        document.getElementById('mobile-zoom-in').addEventListener('click', () => document.getElementById('zoom-in-btn').click());
+        document.getElementById('mobile-zoom-out').addEventListener('click', () => document.getElementById('zoom-out-btn').click());
+        document.getElementById('mobile-fit-all').addEventListener('click', () => {
+            document.getElementById('fit-btn').click();
+            toggleSidebar(false);
+        });
+
+        // Exports
+        document.getElementById('mobile-export-pdf').addEventListener('click', () => {
+            document.getElementById('export-pdf-btn').click();
+            toggleSidebar(false);
+        });
+        document.getElementById('mobile-export-json').addEventListener('click', () => {
+            document.getElementById('export-json-btn').click();
+            toggleSidebar(false);
+        });
+        document.getElementById('mobile-export-pdf').addEventListener('click', () => document.getElementById('export-pdf-btn').click());
+        document.getElementById('mobile-export-json').addEventListener('click', () => document.getElementById('export-json-btn').click());
+
+        document.getElementById('mobile-timelines-btn').addEventListener('click', () => {
+            document.querySelector('#timelines-dropdown-container button').click();
+        });
+        document.getElementById('mobile-stories-btn').addEventListener('click', () => {
+            document.querySelector('#stories-dropdown-container button').click();
+        });
+
+        // Landscape Tip Logic
+        const landscapeTip = document.getElementById('landscape-tip');
+        const dismissTipBtn = document.getElementById('dismiss-landscape-tip');
+        
+        if (dismissTipBtn) {
+            dismissTipBtn.addEventListener('click', () => {
+                landscapeTip.style.setProperty('display', 'none', 'important');
+            });
         }
     });
 
