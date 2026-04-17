@@ -265,7 +265,11 @@ class ResearchQuestionInline(GenericTabularInline):
 class LocationAdmin(SimpleHistoryAdmin, OwnedAdmin):
     list_select_related = ('owner', 'parent')
     inlines = [ResearchQuestionInline, LocationAliasInline, LocationAttachmentInline, DisputedFactInline, PublicCommentInline]
-    list_display = ('name', 'owner_display', 'parent', 'status', 'is_private', 'needs_research', 'coordinates', 'image', 'clone_link')
+    list_display = ('name', 'owner_display', 'parent', 'status', 'is_private', 'needs_research', 'coordinates', 'has_image', 'clone_link')
+
+    @admin.display(description='Image', boolean=True)
+    def has_image(self, obj):
+        return bool(obj.image)
     search_fields = ('name', 'parent__name', 'owner__username', 'aliases__name')
     list_filter = (DiscoveryFilter, 'owner', 'needs_research', 'is_private', 'status', 'parent', 'tags')
     autocomplete_fields = ('parent', 'coordinates_source', 'established_date_source', 'ceased_date_source')
