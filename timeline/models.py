@@ -253,14 +253,19 @@ class Person(models.Model):
         ordering = ['name']
 
     def save(self, *args, **kwargs):
-        """
-        Custom save method that automatically synchronizes critical life events 
-        (birth/death) with the main timeline. 
-        
-        NOTE: This implementation relies on 'is_auto_generated=True' to distinguish 
-        and find previously created auto-events, preventing infinite recursion 
-        when the generated events are themselves saved.
-        """
+        import logging
+        logger = logging.getLogger(__name__)
+        if self.image:
+            logger.info(f"🔍 DEBUG: Saving Person '{self.name}' with image '{self.image.name}'")
+            try:
+                logger.info(f"   - Storage: {self.image.storage.__class__.__name__}")
+                if hasattr(self.image.storage, 'bucket_name'):
+                    logger.info(f"   - Bucket: {self.image.storage.bucket_name}")
+            except Exception as e:
+                logger.error(f"   - Storage Debug Error: {e}")
+        else:
+            logger.info(f"🔍 DEBUG: Saving Person '{self.name}' with NO IMAGE")
+
         super().save(*args, **kwargs)
         
         # Handle Birth Event
