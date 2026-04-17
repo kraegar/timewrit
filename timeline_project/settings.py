@@ -298,13 +298,30 @@ STORAGES = {
 }
 
 if os.getenv('USE_GCS', 'False') == 'True':
-    DEFAULT_FILE_STORAGE = 'storages.backends.gcloud.GoogleCloudStorage'
-    STATICFILES_STORAGE = 'storages.backends.gcloud.GoogleCloudStorage'
+    from datetime import timedelta
+    # Media files (user uploads) — private bucket with signed URLs.
+    # Signed URLs expire after 1 hour so private images cannot be hotlinked
+    # indefinitely even if someone captures a URL.
     GS_BUCKET_NAME = os.getenv('GS_BUCKET_NAME')
-    GS_DEFAULT_ACL = 'publicRead'
+    GS_DEFAULT_ACL = None          # Keep objects private (uniform bucket-level access)
+    GS_QUERYSTRING_AUTH = True     # Generate signed URLs automatically
+    GS_EXPIRATION = timedelta(hours=1)
+    GS_OBJECT_PARAMETERS = {
+        'Cache-Control': 'private, max-age=3600',
+    }
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.gcloud.GoogleCloudStorage",
+        },
+        # Static assets (CSS/JS) stay on WhiteNoise — no GCS bucket needed
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
 else:
     MEDIA_URL = '/media/'
     MEDIA_ROOT = BASE_DIR / 'media'
+
 
 # Logging & Monitoring
 if os.getenv('USE_CLOUD_LOGGING', 'False') == 'True':
