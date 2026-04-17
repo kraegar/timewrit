@@ -4747,6 +4747,16 @@
             });
         }
 
+        // Mobile Accordion Toggles
+        const timelineToggle = document.getElementById('mobile-timelines-toggle');
+        const timelineList = document.getElementById('mobile-timelines-list');
+        if (timelineToggle && timelineList) {
+            timelineToggle.addEventListener('click', () => {
+                timelineList.classList.toggle('hidden');
+                timelineToggle.querySelector('i.fa-chevron-down').classList.toggle('rotate-180');
+            });
+        }
+
         const storyToggle = document.getElementById('mobile-stories-toggle');
         const storyList = document.getElementById('mobile-stories-list');
         if (storyToggle && storyList) {
