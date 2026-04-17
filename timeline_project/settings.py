@@ -321,6 +321,7 @@ if os.getenv('USE_GCS', 'False') == 'True':
             "OPTIONS": {
                 "bucket_name": GS_BUCKET_NAME,
                 "project_id": GS_PROJECT_ID,
+                "location": "media",                    # Store everything under the 'media/' prefix
                 "querystring_auth": True,               # Generate signed URLs automatically
                 "default_acl": None,                    # Keep objects private (uniform bucket-level access)
                 "expiration": timedelta(hours=1),       # Signed URLs expire after 1 hour
