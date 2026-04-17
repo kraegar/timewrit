@@ -254,8 +254,6 @@ class JsonEventImporter:
                         'start_date': parse_date(r['start_date']) if r.get('start_date') else None,
                         'end_date': parse_date(r['end_date']) if r.get('end_date') else None,
                         'notes': r.get('notes', ''),
-                        'is_auto': r.get('is_auto', False),
-                        'owner': self.user
                     }
                 )
                 self.stats['relationships'] += 1
