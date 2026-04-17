@@ -3547,7 +3547,12 @@
                     }
 
                     const events = data.events || [];
-                    window.rawEventsData = events; // Store for modal access
+                    window.rawEventsData = events; 
+                    
+                    // If we are currently in a dash view, ensure it refreshes now that data is here
+                    if (currentView === 'people') renderPeopleView();
+                    if (currentView === 'location') renderLocationView();
+
                     const formattedData = [];
                     const groupsSet = new Set();
                     const groupsData = [];
@@ -3787,32 +3792,32 @@
 
             if (currentView === 'reading') {
                 readingWrapper.classList.remove('hidden');
-                viewToggleBtn.innerHTML = '<i class="fa-solid fa-chart-line text-lg mb-0.5 text-blue-800 dark:text-blue-300"></i><span class="text-[10px] font-bold uppercase leading-none" id="reading-mode-text">Chart</span>';
+                viewToggleBtn.innerHTML = '<i class="fa-solid fa-chart-line text-lg mb-0.5 text-blue-800 dark:text-blue-300"></i><span class="text-[10px] font-bold uppercase leading-none">Chart</span>';
                 viewToggleBtn.classList.add('bg-blue-100', 'border-blue-300', 'dark:border-blue-700');
-                loadEvents(); // force render
+                loadEvents(); 
             } else if (currentView === 'network') {
                 networkWrapper.classList.remove('hidden');
                 networkToggleBtn.innerHTML = '<i class="fa-solid fa-chart-line text-lg mb-0.5 text-blue-800 dark:text-blue-300"></i><span class="text-[10px] font-bold uppercase leading-none">Chart</span>';
                 networkToggleBtn.classList.add('bg-blue-100', 'border-blue-300', 'dark:border-blue-700');
-                renderNetwork(); // force render
+                renderNetwork();
             } else if (currentView === 'people') {
                 peopleWrapper.classList.remove('hidden');
-                peopleToggleBtn.innerHTML = '<i class="fa-solid fa-chart-line text-lg mb-0.5 text-blue-800 dark:text-blue-300"></i><span class="text-[10px] font-bold uppercase leading-none">Chart</span>';
                 peopleToggleBtn.classList.add('bg-blue-100', 'border-blue-300', 'dark:border-blue-700');
                 renderPeopleView();
             } else if (currentView === 'location') {
                 locationWrapper.classList.remove('hidden');
-                locationToggleBtn.innerHTML = '<i class="fa-solid fa-chart-line text-lg mb-0.5 text-blue-800 dark:text-blue-300"></i><span class="text-[10px] font-bold uppercase leading-none">Chart</span>';
                 locationToggleBtn.classList.add('bg-blue-100', 'border-blue-300', 'dark:border-blue-700');
                 renderLocationView();
             } else {
                 timelineWrapper.classList.remove('hidden');
                 setTimeout(() => {
-                    timeline.redraw();
-                    if (preserveZoom && capturedWindow) {
-                        timeline.setWindow(capturedWindow.start, capturedWindow.end, { animation: false });
-                    } else {
-                        timeline.fit();
+                    if (typeof timeline !== 'undefined' && timeline !== null) {
+                        timeline.redraw();
+                        if (preserveZoom && capturedWindow) {
+                            timeline.setWindow(capturedWindow.start, capturedWindow.end, { animation: false });
+                        } else {
+                            timeline.fit();
+                        }
                     }
                 }, 50);
             }
@@ -3954,16 +3959,28 @@
             const searchInput = document.getElementById('people-view-search');
             container.innerHTML = '';
 
-            if (!currentData) return;
-
-            const items = currentData.get();
+            const sourceData = window.rawEventsData || [];
             const uniquePeople = new Map();
 
-            items.forEach(item => {
-                if (item.people && Array.isArray(item.people)) {
-                    item.people.forEach(person => {
-                        if (!uniquePeople.has(person.id)) {
-                            uniquePeople.set(person.id, person);
+            sourceData.forEach(item => {
+                const peopleList = item.people || [];
+                if (Array.isArray(peopleList)) {
+                    peopleList.forEach(p => {
+                        // In this app, item.people is often just a list of names (strings)
+                        const personId = typeof p === 'object' ? p.id : p;
+                        if (personId && !uniquePeople.has(personId)) {
+                            // Try re-hydration from global dictionary (keyed by ID or Name)
+                            let personObj = (window.globalPeopleDict && window.globalPeopleDict[personId]) ? window.globalPeopleDict[personId] : p;
+                            
+                            if (personObj && typeof personObj === 'object' && personObj.name) {
+                                uniquePeople.set(personId, personObj);
+                            } else {
+                                // Fallback: Create a minimal object for the card UI
+                                uniquePeople.set(personId, { 
+                                    id: personId, 
+                                    name: typeof p === 'object' ? (p.name || personId) : p 
+                                });
+                            }
                         }
                     });
                 }
@@ -4016,15 +4033,28 @@
             const searchInput = document.getElementById('location-view-search');
             container.innerHTML = '';
 
-            if (!currentData) return;
-
-            const items = currentData.get();
+            const sourceData = window.rawEventsData || [];
             const uniqueLocations = new Map();
 
-            items.forEach(item => {
-                if (item.location && item.location.id) {
-                    if (!uniqueLocations.has(item.location.id)) {
-                        uniqueLocations.set(item.location.id, item.location);
+            sourceData.forEach(item => {
+                // The serializer uses 'location_name' for the primary event location
+                const locData = item.location || item.location_name;
+                if (locData) {
+                    const locId = typeof locData === 'object' ? locData.id : locData;
+                    if (locId && !uniqueLocations.has(locId)) {
+                        // Re-hydrate from global dict
+                        let locObj = (window.globalLocationsDict && window.globalLocationsDict[locId]) ? window.globalLocationsDict[locId] : locData;
+                        
+                        if (locObj && typeof locObj === 'object' && (locObj.name || locObj.short_name)) {
+                            uniqueLocations.set(locId, locObj);
+                        } else {
+                            // Fallback minimal object
+                            uniqueLocations.set(locId, { 
+                                id: locId, 
+                                name: typeof locData === 'object' ? (locData.name || locId) : locData,
+                                short_name: typeof locData === 'object' ? (locData.short_name || locData.name || locId) : locData 
+                            });
+                        }
                     }
                 }
             });
@@ -4665,11 +4695,11 @@
              toggleSidebar(false);
         });
         document.getElementById('mobile-people-btn').addEventListener('click', () => {
-             document.getElementById('show-people-dashboard').click();
+             document.getElementById('people-toggle-btn').click();
              toggleSidebar(false);
         });
         document.getElementById('mobile-places-btn').addEventListener('click', () => {
-             document.getElementById('show-locations-dashboard').click();
+             document.getElementById('location-toggle-btn').click();
              toggleSidebar(false);
         });
 
