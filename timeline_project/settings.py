@@ -311,10 +311,35 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 if os.getenv('USE_GCS', 'False') == 'True':
     from datetime import timedelta
-    # Media files (user uploads) — private bucket with signed URLs.
     GS_PROJECT_ID = os.getenv('GCP_PROJECT_ID', 'bg-helpers')
     GS_BUCKET_NAME = os.getenv('GS_BUCKET_NAME', 'timewrit-assets-bg-helpers')
-    
+
+    # On Cloud Run, generate_signed_url() needs explicit signing credentials.
+    # We use the IAM credentials API to self-impersonate the running service account.
+    # This requires roles/iam.serviceAccountTokenCreator on itself (already granted).
+    GS_CREDENTIALS = None
+    try:
+        import google.auth
+        import google.auth.transport.requests
+        from google.auth import impersonated_credentials
+
+        source_credentials, _ = google.auth.default()
+        # Refresh so we can read the service account email from the token
+        request = google.auth.transport.requests.Request()
+        source_credentials.refresh(request)
+        service_account_email = getattr(source_credentials, 'service_account_email', None)
+
+        if service_account_email and service_account_email != 'default':
+            # Self-impersonate — this gives us a credential object that can sign blobs
+            GS_CREDENTIALS = impersonated_credentials.Credentials(
+                source_credentials=source_credentials,
+                target_principal=service_account_email,
+                target_scopes=['https://www.googleapis.com/auth/devstorage.read_only'],
+                lifetime=3600,
+            )
+    except Exception:
+        pass  # Falls back to default credentials (works locally with ADC)
+
     STORAGES = {
         "default": {
             "BACKEND": "storages.backends.gcloud.GoogleCloudStorage",
@@ -322,11 +347,12 @@ if os.getenv('USE_GCS', 'False') == 'True':
                 "bucket_name": GS_BUCKET_NAME,
                 "project_id": GS_PROJECT_ID,
                 "location": "media",
-                "querystring_auth": False,   # DIAGNOSTIC: set False to test if signBlob is the issue
-                "default_acl": "publicRead",  # Required when querystring_auth is False
+                "querystring_auth": True,       # Use signed URLs (required for private bucket)
+                "default_acl": None,            # Uniform bucket-level access — no per-object ACLs
                 "expiration": timedelta(hours=1),
+                "credentials": GS_CREDENTIALS, # Explicit signing identity for Cloud Run
                 "object_parameters": {
-                    "Cache-Control": "public, max-age=3600",
+                    "Cache-Control": "private, max-age=3600",
                 },
             },
         },
