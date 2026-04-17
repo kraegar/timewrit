@@ -113,6 +113,11 @@ gsutil mb gs://[YOUR_UNIQUE_BUCKET_NAME]
 gcloud projects add-iam-policy-binding [PROJECT_ID] \
     --member="serviceAccount:timewrit-deployer@[PROJECT_ID].iam.gserviceaccount.com" \
     --role="roles/storage.objectAdmin"
+
+# Grant Service Account Token Creator (Required for GCS Signed URLs)
+gcloud projects add-iam-policy-binding [PROJECT_ID] \
+    --member="serviceAccount:timewrit-deployer@[PROJECT_ID].iam.gserviceaccount.com" \
+    --role="roles/iam.serviceAccountTokenCreator"
 ```
 
 ---
@@ -206,3 +211,19 @@ Navigate to **APIs & Services > Credentials** and create an **OAuth 2.0 Client I
 
 > [!NOTE]
 > The **Researchers** group is automatically created and maintained via the self-healing migration `0043_create_researchers_group.py`.
+
+---
+
+## 🩺 Appendix: Troubleshooting
+
+### Images Not Loading (GCS)
+If you see broken images in production despite a successful upload:
+
+1.  **Check IAM Permissions**: Ensure the service account has the `Service Account Token Creator` and `Storage Object Admin` roles. Without Token Creator, the app cannot "sign" the private URLs for your browser to view.
+2.  **Verify Secrets**: Check that `GS_BUCKET_NAME` matches exactly what you created in Phase 3.
+3.  **CORS Policy**: If you are using the Knowledge Graph or Map and images still don't render, you may need to set a CORS policy on the bucket:
+    ```bash
+    echo '[{"origin": ["*"],"method": ["GET"],"maxAgeSeconds": 3600}]' > cors-json-file.json
+    gsutil cors set cors-json-file.json gs://[YOUR_BUCKET_NAME]
+    ```
+4.  **Time Sync**: If your server time (on Cloud Run) doesn't match Google's time, signed URLs will be invalid. This is rare on managed infrastructure but can happen on custom VMs.
