@@ -199,7 +199,7 @@ gcloud run jobs create timewrit-load-help \
     --command=python \
     --args=manage.py,load_help_content \
     --set-env-vars="USE_SECRET_MANAGER=True,GCP_PROJECT_ID=[PROJECT_ID],USE_GCS=True" \
-    --add-cloudsql-instances [PROJECT_ID]:us-east1:timewrit-db
+    --set-cloudsql-instances [PROJECT_ID]:us-east1:timewrit-db
 
 gcloud run jobs execute timewrit-load-help --region us-east1
 ```

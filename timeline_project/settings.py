@@ -334,7 +334,7 @@ if os.getenv('USE_GCS', 'False') == 'True':
             GS_CREDENTIALS = impersonated_credentials.Credentials(
                 source_credentials=source_credentials,
                 target_principal=service_account_email,
-                target_scopes=['https://www.googleapis.com/auth/devstorage.read_only'],
+                target_scopes=['https://www.googleapis.com/auth/devstorage.full_control'],
                 lifetime=3600,
             )
     except Exception:
