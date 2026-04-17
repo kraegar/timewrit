@@ -1600,8 +1600,7 @@
         const entityLink = document.getElementById('entity-link');
         const closeEntityModalBtn = document.getElementById('close-entity-modal');
         const entityDates = document.getElementById('entity-dates');
-        const entityBirth = document.getElementById('entity-birth');
-        const entityDeath = document.getElementById('entity-death');
+        // entity-birth / entity-death spans are overwritten via entityDates.innerHTML — no direct JS reference needed
         const entityTagsContainer = document.getElementById('entity-tags-container');
         const entityTags = document.getElementById('entity-tags');
         const entityRelationshipsContainer = document.getElementById('entity-relationships-container');
@@ -1674,7 +1673,7 @@
         const treeModalTitle = document.getElementById('tree-modal-title');
         const closeTreeModalBtn = document.getElementById('close-tree-modal');
 
-        closeTreeModalBtn.onclick = () => treeModal.classList.add('hidden');
+        if (closeTreeModalBtn) closeTreeModalBtn.onclick = () => treeModal.classList.add('hidden');
 
         function formatDate(dateString) {
             if (!dateString) return '';
@@ -2392,11 +2391,11 @@
                     const deathHtml = `<span>${deathStr}</span>${renderCitation(entity.death_date_source, entitySources, 'entity-sources')}`;
 
                     let locationsInfo = [];
-                    if (entity.birth_location) {
-                        locationsInfo.push(`Born in ${entity.birth_location}${renderCitation(entity.birth_location_source, entitySources, 'entity-sources')}`);
+                    if (entity.birth_location_name) {
+                        locationsInfo.push(`Born in ${entity.birth_location_name}${renderCitation(entity.birth_location_source, entitySources, 'entity-sources')}`);
                     }
-                    if (entity.death_location) {
-                        locationsInfo.push(`Died in ${entity.death_location}${renderCitation(entity.death_location_source, entitySources, 'entity-sources')}`);
+                    if (entity.death_location_name) {
+                        locationsInfo.push(`Died in ${entity.death_location_name}${renderCitation(entity.death_location_source, entitySources, 'entity-sources')}`);
                     }
 
                     let genderHtml = '';
@@ -4822,13 +4821,13 @@
             if (typeof toggleSidebar === 'function') toggleSidebar(false);
         });
 
-        const mobTlBtn = document.getElementById('mobile-timelines-btn');
+        const mobTlBtn = document.getElementById('mobile-timelines-toggle');
         if (mobTlBtn) mobTlBtn.addEventListener('click', () => {
             const btn = document.querySelector('#timelines-dropdown-container button');
             if (btn) btn.click();
         });
 
-        const mobStoryBtn = document.getElementById('mobile-stories-btn');
+        const mobStoryBtn = document.getElementById('mobile-stories-toggle');
         if (mobStoryBtn) mobStoryBtn.addEventListener('click', () => {
             const btn = document.querySelector('#stories-dropdown-container button');
             if (btn) btn.click();
