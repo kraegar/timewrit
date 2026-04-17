@@ -13,8 +13,9 @@ def _safe_image_url(image_field, relative=False):
         return image_field.name
     try:
         return image_field.url
-    except ValueError:
+    except Exception:
         return None
+
 
 def serialize_tags(tags_manager):
     """
